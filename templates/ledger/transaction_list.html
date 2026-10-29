@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Transaksi{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+  <!-- Header + Tombol Baru -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <h1 class="text-2xl font-semibold text-gray-800">Transaksi</h1>
+    <a href="{% url 'ledger:transaction_create' %}" class="btn btn-primary self-start">
+      + Transaksi Baru
+    </a>
+  </div>
+
+  <!-- Filter Bar -->
+  <form method="get" action="{% url 'ledger:transaction_list' %}" class="bg-white rounded-lg shadow p-4 mb-6 space-y-4" id="filter-form">
+    <!-- Baris 1: Tanggal + Arus + Kategori -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <label for="id_date_from" class="label">Tanggal Mulai</label>
+        <input type="date" name="date_from" id="id_date_from" value="{{ date_from_display }}" class="input w-full" />
+      </div>
+      <div>
+        <label for="id_date_to" class="label">Tanggal Akhir</label>
+        <input type="date" name="date_to" id="id_date_to" value="{{ date_to_display }}" class="input w-full" />
+      </div>
+      <div>
+        <label for="id_flow" class="label">Arus</label>
+        <select name="flow" id="id_flow" class="select w-full" hx-get="{% url 'ledger:transaction_item_options' %}" hx-target="#id_item" hx-include="[name='flow']" hx-trigger="change">
+          <option value="">Semua</option>
+          <option value="income" {% if filters.flow == 'income' %}selected{% endif %}>Pemasukan</option>
+          <option value="expense" {% if filters.flow == 'expense' %}selected{% endif %}>Pengeluaran</option>
+        </select>
+      </div>
+      <div>
+        <label for="id_category" class="label">Kategori</label>
+        <select name="category" id="id_category" class="select w-full" hx-get="{% url 'ledger:transaction_item_options' %}" hx-target="#id_item" hx-include="[name='flow'],[name='category']" hx-trigger="change">
+          <option value="">Semua</option>
+          {% for cat in categories %}
+            <option value="{{ cat.pk }}" {% if filters.category_id == cat.pk %}selected{% endif %}>
+              {{ cat.name }}{% if not cat.is_active %} (nonaktif){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {% if filters.category_id and not categories|length %}
+          <p class="text-red-600 text-sm mt-1">{{ messages.FILTER_CATEGORY_INVALID }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Baris 2: Item + Nominal + Keyword -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="sm:col-span-2 lg:col-span-2">
+        <label for="id_item" class="label">Item</label>
+        <select name="item" id="id_item" class="select w-full">
+          <option value="">Semua</option>
+          {% for it in items %}
+            <option value="{{ it.pk }}" {% if filters.item_id == it.pk %}selected{% endif %}>
+              {{ it.name }}{% if not it.is_active %} (nonaktif){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {% if filters.item_id and not items|length %}
+          <p class="text-red-600 text-sm mt-1">{{ messages.FILTER_ITEM_INVALID }}</p>
+        {% endif %}
+      </div>
+      <div>
+        <label for="id_amount_min" class="label">Nominal Min</label>
+        <input type="text" name="amount_min" id="id_amount_min" value="{{ amount_min_display }}" placeholder="0" class="input w-full text-right" inputmode="decimal" />
+      </div>
+      <div>
+        <label for="id_amount_max" class="label">Nominal Maks</label>
+        <input type="text" name="amount_max" id="id_amount_max" value="{{ amount_max_display }}" placeholder="0" class="input w-full text-right" inputmode="decimal" />
+      </div>
+      <div>
+        <label for="id_keyword" class="label">Kata Kunci</label>
+        <input type="text" name="keyword" id="id_keyword" value="{{ filters.keyword|default:'' }}" placeholder="keterangan..." class="input w-full" />
+      </div>
+    </div>
+
+    <!-- Baris 3: Sort + Show Deleted + Actions -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+      <div>
+        <label for="id_sort" class="label">Urutkan</label>
+        <select name="sort" id="id_sort" class="select w-full">
+          <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>Tanggal (terbaru)</option>
+          <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>Tanggal (terlama)</option>
+          <option value="amount_desc" {% if filters.sort == 'amount_desc' %}selected{% endif %}>Nominal (terbesar)</option>
+          <option value="amount_asc" {% if filters.sort == 'amount_asc' %}selected{% endif %}>Nominal (terkecil)</option>
+          <option value="created_desc" {% if filters.sort == 'created_desc' %}selected{% endif %}>Dibuat (terbaru)</option>
+          <option value="created_asc" {% if filters.sort == 'created_asc' %}selected{% endif %}>Dibuat (terlama)</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="checkbox" name="show_deleted" id="id_show_deleted" value="1" {% if filters.show_deleted %}checked{% endif %} class="checkbox" />
+        <label for="id_show_deleted" class="label cursor-pointer mb-0">Termasuk dihapus</label>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">Terapkan</button>
+        <a href="{% url 'ledger:transaction_list' %}" class="btn btn-secondary">Reset</a>
+        <button type="button" class="btn btn-secondary" disabled>Export Hasil</button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Results -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <!-- Summary -->
+    <div class="px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
+      <span>
+        Menampilkan <strong>{{ result.transactions|length }}</strong> dari <strong>{{ result.total_count }}</strong> transaksi
+        {% if result.total_active != result.total_count %}
+          ({{ result.total_active }} aktif)
+        {% endif %}
+      </span>
+      <span>
+        Halaman {{ result.page }} dari {{ result.total_pages|default:"1" }}
+      </span>
+    </div>
+
+    <!-- Table (Desktop) -->
+    <div class="hidden lg:block overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Tanggal</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Arus</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Kategori</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Item</th>
+            <th class="px-4 py-3 text-right font-medium text-gray-500">Nominal</th>
+            <th class="px-4 py-3 text-center font-medium text-gray-500">Qty</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Metode</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Keterangan</th>
+            <th class="px-4 py-3 text-left font-medium text-gray-500">Status</th>
+            <th class="px-4 py-3 text-center font-medium text-gray-500">Aksi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          {% for txn in result.transactions %}
+            <tr class="{% if txn.deleted_at %}line-through text-gray-400 bg-gray-50{% else %}hover:bg-gray-50{% endif %}">
+              <td class="px-4 py-3">{{ txn.date|date:"d/m/Y" }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                  {% if txn.flow == 'income' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                  {{ FLOW_LABELS|get_item:txn.flow }}
+                </span>
+              </td>
+              <td class="px-4 py-3">{{ txn.category.name }}{% if txn.category.code == 'AFKIR' %} <span class="text-xs text-gray-500">(AFKIR)</span>{% endif %}</td>
+              <td class="px-4 py-3">{{ txn.item.name }}</td>
+              <td class="px-4 py-3 text-right font-mono">{{ txn.amount|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-center font-mono">
+                {% if txn.qty %}
+                  {{ txn.qty|floatformat:3 }} {{ txn.unit }}
+                {% else %}
+                  <span class="text-gray-300">-</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                {% if txn.payment_method == 'transfer' %}Transfer
+                {% elif txn.payment_method == 'cash' %}Tunai
+                {% else %}<span class="text-gray-300">-</span>{% endif %}
+              </td>
+              <td class="px-4 py-3 max-w-xs truncate">{{ txn.notes|default:"-" }}</td>
+              <td class="px-4 py-3">
+                {% if txn.deleted_at %}
+                  <span class="badge badge-error">Dihapus</span>
+                {% else %}
+                  <span class="badge badge-success">Aktif</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-center">
+                {% if not txn.deleted_at %}
+                  <a href="{% url 'ledger:transaction_detail' txn.pk %}" class="btn btn-sm btn-ghost">Detail</a>
+                {% else %}
+                  <a href="{% url 'ledger:transaction_detail' txn.pk %}" class="btn btn-sm btn-ghost">Detail</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10" class="px-4 py-8 text-center text-gray-500">Tidak ada transaksi</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cards (Mobile) -->
+    <div class="lg:hidden p-4 space-y-3">
+      {% for txn in result.transactions %}
+        <article class="border border-gray-200 rounded-lg p-4 {% if txn.deleted_at %}bg-gray-50 line-through{% endif %}">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <span class="font-medium">{{ txn.date|date:"d/m/Y" }}</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+              {% if txn.flow == 'income' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+              {{ FLOW_LABELS|get_item:txn.flow }}
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 text-sm text-gray-700 mb-2">
+            <div><span class="font-medium">Kategori:</span> {{ txn.category.name }}{% if txn.category.code == 'AFKIR' %} <span class="text-xs text-gray-500">(AFKIR)</span>{% endif %}</div>
+            <div><span class="font-medium">Item:</span> {{ txn.item.name }}</div>
+            <div><span class="font-medium">Nominal:</span> {{ txn.amount|floatformat:2 }}</div>
+            <div><span class="font-medium">Qty:</span> {% if txn.qty %}{{ txn.qty|floatformat:3 }} {{ txn.unit }}{% else %}-{% endif %}</div>
+            <div class="col-span-2"><span class="font-medium">Metode:</span> {% if txn.payment_method == 'transfer' %}Transfer{% elif txn.payment_method == 'cash' %}Tunai{% else %}-{% endif %}</div>
+            <div class="col-span-2"><span class="font-medium">Keterangan:</span> {{ txn.notes|default:"-" }}</div>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-gray-200">
+            <span class="text-xs {% if txn.deleted_at %}text-red-600{% else %}text-green-600{% endif %}">
+              {% if txn.deleted_at %}Dihapus{% else %}Aktif{% endif %}
+            </span>
+            <a href="{% url 'ledger:transaction_detail' txn.pk %}" class="btn btn-sm btn-primary">Detail</a>
+          </div>
+        </article>
+      {% empty %}
+        <div class="text-center text-gray-500 py-8">Tidak ada transaksi</div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if result.total_pages > 1 %}
+      <nav class="px-4 py-3 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" aria-label="Pagination">
+        <span class="text-sm text-gray-600">Halaman {{ result.page }} dari {{ result.total_pages }}</span>
+        <div class="flex items-center gap-1">
+          {% if result.page > 1 %}
+            <a href="?{{ query_string }}&page={{ result.page|add:'-1' }}" class="btn btn-sm btn-secondary">Sebelumnya</a>
+          {% endif %}
+          {% for p in result.page|add:'-2'|get_range:result.total_pages %}
+            {% if p >= 1 and p <= result.total_pages %}
+              <a href="?{{ query_string }}&page={{ p }}" class="btn btn-sm {% if p == result.page %}btn-primary{% else %}btn-secondary{% endif %}">{{ p }}</a>
+            {% endif %}
+          {% endfor %}
+          {% if result.page < result.total_pages %}
+            <a href="?{{ query_string }}&page={{ result.page|add:'1' }}" class="btn btn-sm btn-secondary">Selanjutnya</a>
+          {% endif %}
+        </div>
+      </nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

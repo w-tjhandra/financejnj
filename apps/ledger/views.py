@@ -6,11 +6,15 @@ placeholder yang menjelaskan ketersediaannya.
 
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
+
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from core import messages
@@ -426,3 +430,113 @@ def transaction_item_fields(request: HttpRequest) -> HttpResponse:
         "ledger/_item_fields.html",
         _form_context(form=form, mode="create"),
     )
+
+
+# --- Transaksi: daftar & pencarian (FR-13, S-04) ----------------------------
+
+
+def _parse_date(s: str | None) -> date | None:
+    if not s:
+        return None
+    try:
+        return date.fromisoformat(s)
+    except ValueError:
+        return None
+
+
+def _parse_decimal(s: str | None) -> Decimal | None:
+    if not s:
+        return None
+    from core.utils.numbers import parse_id_number
+
+    try:
+        return parse_id_number(s, 2)
+    except Exception:
+        return None
+
+
+@login_required
+@require_GET
+def transaction_list(request: HttpRequest) -> HttpResponse:
+    """S-04: Daftar transaksi dengan filter, pencarian, pagination."""
+    today = today_wib()
+    month_start_date = date(today.year, today.month, 1)
+    if today.month == 12:
+        month_end_date = date(today.year + 1, 1, 1) - timezone.timedelta(days=1)
+    else:
+        month_end_date = date(today.year, today.month + 1, 1) - timezone.timedelta(days=1)
+
+    # Parse filter dari GET
+    date_from = _parse_date(request.GET.get("date_from")) or month_start_date
+    date_to = _parse_date(request.GET.get("date_to")) or month_end_date
+    flow = request.GET.get("flow") or None
+    if flow not in {"income", "expense"}:
+        flow = None
+    category_id = request.GET.get("category")
+    category_id = int(category_id) if category_id and category_id.isdigit() else None
+    item_id = request.GET.get("item")
+    item_id = int(item_id) if item_id and item_id.isdigit() else None
+    amount_min = _parse_decimal(request.GET.get("amount_min"))
+    amount_max = _parse_decimal(request.GET.get("amount_max"))
+    keyword = request.GET.get("keyword") or None
+    show_deleted = request.GET.get("show_deleted") == "1"
+    sort = request.GET.get("sort") or "date_desc"
+    allowed_sorts = {
+        "date_desc",
+        "date_asc",
+        "amount_desc",
+        "amount_asc",
+        "created_desc",
+        "created_asc",
+    }
+    if sort not in allowed_sorts:
+        sort = "date_desc"
+    page = int(request.GET.get("page") or 1)
+    if page < 1:
+        page = 1
+
+    # Validasi range nominal
+    if amount_min is not None and amount_max is not None and amount_min > amount_max:
+        # Kembalikan ke halaman 1 dengan error
+        page = 1
+
+    from ledger.queries import TransactionListFilters, get_filter_options, transaction_list
+
+    filters = TransactionListFilters(
+        date_from=date_from,
+        date_to=date_to,
+        flow=flow,
+        category_id=category_id,
+        item_id=item_id,
+        amount_min=amount_min,
+        amount_max=amount_max,
+        keyword=keyword,
+        show_deleted=show_deleted,
+        sort=sort,
+        page=page,
+    )
+    result = transaction_list(filters)
+
+    # Opsi filter
+    filter_options = get_filter_options(flow)
+
+    # Build query string untuk pagination (tanpa page)
+    from urllib.parse import urlencode
+
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    query_string = urlencode(query_params)
+
+    context = {
+        "result": result,
+        "filters": filters,
+        "categories": filter_options["categories"],
+        "items": filter_options["items"],
+        "query_string": query_string,
+        "FLOW_LABELS": {"income": "Pemasukan", "expense": "Pengeluaran"},
+        "date_from_display": format_date_short(date_from),
+        "date_to_display": format_date_short(date_to),
+        "amount_min_display": format_money(amount_min) if amount_min is not None else "",
+        "amount_max_display": format_money(amount_max) if amount_max is not None else "",
+    }
+    return render(request, "ledger/transaction_list.html", context)

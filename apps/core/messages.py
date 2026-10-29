@@ -75,6 +75,9 @@ AMOUNT_MAX = "Nominal maksimum Rp 100.000.000.000."
 QTY_MIN = "Qty harus lebih dari 0."
 QTY_MAX = "Qty maksimum 1.000.000."
 AMOUNT_RANGE = "Nominal minimum tidak boleh lebih besar dari maksimum"
+DATE_RANGE = "Tanggal mulai tidak boleh melebihi tanggal akhir."
+FILTER_CATEGORY_INVALID = "Pilihan kategori tidak valid."
+FILTER_ITEM_INVALID = "Pilihan item tidak valid."
 
 # --- Transaksi & stok -----------------------------------------------------
 QTY_REQUIRED = "Qty wajib untuk item terkait stok"
