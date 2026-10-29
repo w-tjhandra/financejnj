@@ -1,0 +1,1 @@
+"""Pustaka bersama milik core."""
