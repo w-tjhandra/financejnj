@@ -12,6 +12,11 @@
           Dashboard
         </a>
       </li>
+      <li>
+        <a href="{% url 'account_settings' %}" class="nav-link" {% if request.resolver_match.url_name == 'account_settings' %}aria-current="page"{% endif %}>
+          Pengaturan akun
+        </a>
+      </li>
     </ul>
 
     <div class="flex items-center gap-2 lg:mt-auto lg:flex-col lg:items-stretch lg:border-t lg:border-slate-200 lg:pt-3">

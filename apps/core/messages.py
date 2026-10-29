@@ -15,6 +15,10 @@ RATE_LIMITED = "Terlalu banyak percobaan. Coba lagi dalam 15 menit."
 SESSION_EXPIRED = "Sesi berakhir, silakan masuk kembali."
 LOGIN_FAILED = "Username atau kata sandi salah"
 PASSWORD_MIN = "Password minimal 10 karakter"
+PASSWORD_SAME_AS_USERNAME = "Kata sandi tidak boleh sama dengan nama pengguna."
+PASSWORD_MISMATCH = "Konfirmasi kata sandi tidak sama."
+OLD_PASSWORD_INCORRECT = "Kata sandi lama salah."
+PASSWORD_CHANGED = "Kata sandi berhasil diperbarui."
 
 # --- Master data ----------------------------------------------------------
 CATEGORY_SYSTEM = "Kategori sistem tidak bisa dihapus."

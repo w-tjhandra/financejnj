@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Pengaturan akun · Telur Finance{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-slate-900">Pengaturan akun</h1>
+    <p class="mt-1 text-sm text-slate-600">Ganti kata sandi untuk akun {{ user.username }}.</p>
+  </header>
+
+  <div class="card">
+    {% if form.non_field_errors %}
+      <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+        {{ form.non_field_errors|join:" " }}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'account_settings' %}" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label for="{{ form.old_password.id_for_label }}" class="label">Kata sandi lama</label>
+        {{ form.old_password }}
+        {% if form.old_password.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.old_password.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label for="{{ form.new_password1.id_for_label }}" class="label">Kata sandi baru</label>
+        {{ form.new_password1 }}
+        {% if form.new_password1.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.new_password1.errors|join:" " }}</p>
+        {% else %}
+          <p class="mt-1 text-xs text-slate-500">{{ form.new_password1.help_text }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-6">
+        <label for="{{ form.new_password2.id_for_label }}" class="label">Konfirmasi kata sandi baru</label>
+        {{ form.new_password2 }}
+        {% if form.new_password2.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.new_password2.errors|join:" " }}</p>
+        {% else %}
+          <p class="mt-1 text-xs text-slate-500">{{ form.new_password2.help_text }}</p>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn w-full sm:w-auto">Simpan kata sandi</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

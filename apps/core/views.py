@@ -1,18 +1,26 @@
-"""Health check dan autentikasi dasar (FR-01)."""
+"""Health check, autentikasi, pengaturan akun, dan halaman error (FR-01)."""
 
 from __future__ import annotations
 
-from django.contrib.auth import logout
-from django.contrib.auth.decorators import login_not_required
+from django.contrib import messages
+from django.contrib.auth import logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_not_required, login_required
 from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.db import connection
-from django.http import HttpRequest, JsonResponse
-from django.shortcuts import redirect
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import redirect, render
 from django.utils.decorators import method_decorator
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from core.forms import LoginForm
+from core import messages as core_messages
+from core.forms import AccountPasswordChangeForm, LoginForm
+from core.services.login_throttle import (
+    is_login_locked,
+    register_login_failure,
+    reset_login_failures,
+)
 
 
 @login_not_required
@@ -29,11 +37,58 @@ def healthz(request: HttpRequest) -> JsonResponse:
     return JsonResponse({"status": "ok", "db": "ok"})
 
 
+def _safe_next_url(request: HttpRequest) -> str | None:
+    """Hanya izinkan path internal; tolak URL absolut, protocol-relative, backslash."""
+    candidate = (request.POST.get("next") or request.GET.get("next") or "").strip()
+    if not candidate:
+        return None
+    if not candidate.startswith("/") or candidate.startswith("//"):
+        return None
+    if "\\" in candidate or "%5c" in candidate.casefold():
+        return None
+    if any(ord(char) < 32 or ord(char) == 127 for char in candidate):
+        return None
+    if not url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return None
+    return candidate
+
+
 @method_decorator(login_not_required, name="dispatch")
 class LoginView(DjangoLoginView):
     template_name = "core/login.html"
     authentication_form = LoginForm
     redirect_authenticated_user = True
+
+    def get_redirect_url(self) -> str | None:
+        return _safe_next_url(self.request)
+
+    def get_success_url(self) -> str:
+        return self.get_redirect_url() or self.get_default_redirect_url()
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        username = (request.POST.get("username") or "").strip()
+        if is_login_locked(request, username):
+            form = self.get_form()
+            form.add_error(None, core_messages.RATE_LIMITED)
+            return self.render_to_response(self.get_context_data(form=form))
+        return super().post(request, *args, **kwargs)
+
+    def form_invalid(self, form) -> HttpResponse:
+        username = (self.request.POST.get("username") or "").strip()
+        # Percobaan dengan field kosong bukan percobaan kredensial.
+        if username and self.request.POST.get("password"):
+            register_login_failure(self.request, username)
+        return super().form_invalid(form)
+
+    def form_valid(self, form) -> HttpResponse:
+        response = super().form_valid(form)
+        username = form.cleaned_data.get("username") or self.request.POST.get("username", "")
+        reset_login_failures(self.request, username)
+        return response
 
 
 @login_not_required
@@ -42,3 +97,31 @@ def logout_view(request: HttpRequest):
     """Logout hanya lewat POST (CSRF) sesuai rancangan §6.2."""
     logout(request)
     return redirect("login")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def account_settings(request: HttpRequest) -> HttpResponse:
+    """Ganti kata sandi; sesi tetap aktif setelah berhasil."""
+    form = AccountPasswordChangeForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        # Perbarui hash sesi agar tidak logout dan sesi lama tidak valid.
+        update_session_auth_hash(request, form.user)
+        messages.success(request, core_messages.PASSWORD_CHANGED)
+        return redirect("account_settings")
+
+    return render(request, "core/account_settings.html", {"form": form})
+
+
+def error_403(request: HttpRequest, exception: Exception) -> HttpResponse:
+    return render(request, "403.html", status=403)
+
+
+def error_404(request: HttpRequest, exception: Exception) -> HttpResponse:
+    return render(request, "404.html", status=404)
+
+
+@never_cache
+def error_500(request: HttpRequest) -> HttpResponse:
+    return render(request, "500.html", status=500)

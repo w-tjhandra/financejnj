@@ -10,6 +10,7 @@ urlpatterns = [
     path("healthz", core_views.healthz, name="healthz"),
     path("masuk", core_views.LoginView.as_view(), name="login"),
     path("keluar", core_views.logout_view, name="logout"),
+    path("pengaturan/akun", core_views.account_settings, name="account_settings"),
     path("setup", onboarding_views.setup_entry, name="setup"),
     path("setup/akun", onboarding_views.step_account, name="setup_account"),
     path("setup/profil", onboarding_views.step_profile, name="setup_profile"),
@@ -18,3 +19,8 @@ urlpatterns = [
     path("setup/ringkasan", onboarding_views.step_review, name="setup_review"),
     path("", reports_views.dashboard, name="dashboard"),
 ]
+
+# Halaman error ramah (Bahasa Indonesia) saat DEBUG=False.
+handler403 = "core.views.error_403"
+handler404 = "core.views.error_404"
+handler500 = "core.views.error_500"

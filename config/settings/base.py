@@ -162,6 +162,10 @@ LOGIN_URL = "/masuk"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/masuk"
 
+# Rate limit login (FR-01): 5 kegagalan per 15 menit per kombinasi IP+username.
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT_SECONDS = 15 * 60
+
 # Batas unggah: lampiran 10 MB + overhead (rancangan §6.3).
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2_500_000
