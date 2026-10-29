@@ -9,7 +9,7 @@ mengizinkan perubahan selama kas belum terkunci.
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.db import transaction
 
@@ -17,11 +17,32 @@ from audit.service import diff, log_audit, snapshot
 from core import messages
 from core.errors import DomainError
 from core.models import CompanyProfile
+from core.services.locks import assert_date_editable
 from core.utils.dates import today_wib
 from ledger.models import Account, Transaction
+from master.models import Category, Item
 
 AUDIT_FIELDS = ("opening_balance", "opening_balance_date")
+CORRECTION_AUDIT_FIELDS = (
+    "date",
+    "flow",
+    "category",
+    "item",
+    "account",
+    "currency",
+    "amount",
+    "qty",
+    "unit",
+    "payment_method",
+    "notes",
+    "period_month",
+    "is_opening_correction",
+    "created_by",
+)
 MONEY_MAX = Decimal("100000000000")
+MONEY_QUANTUM = Decimal("0.01")
+REASON_MIN = 10
+REASON_MAX = 300
 
 
 def cash_is_locked() -> bool:
@@ -100,3 +121,92 @@ def set_opening_balance(
                 meta=meta,
             )
         return account
+
+
+def _correction_delta(value: object) -> Decimal:
+    if isinstance(value, Decimal):
+        delta = value
+    elif isinstance(value, float):
+        raise DomainError(messages.NUMBER_INVALID.format(field="Nominal"), code="number_invalid")
+    else:
+        try:
+            delta = Decimal(str(value))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise DomainError(
+                messages.NUMBER_INVALID.format(field="Nominal"), code="number_invalid"
+            ) from exc
+    delta = delta.quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
+    if delta == 0:
+        raise DomainError("Nominal koreksi tidak boleh nol.", code="amount_zero")
+    if abs(delta) > MONEY_MAX:
+        raise DomainError(
+            messages.AMOUNT_MAX,
+            code="amount_max",
+            fields={"amount": messages.AMOUNT_MAX},
+        )
+    return delta
+
+
+def record_opening_correction(
+    *,
+    delta: object,
+    reason: str,
+    actor=None,
+    meta=None,
+) -> Transaction:
+    """Koreksi saldo awal sebagai transaksi sistem non-operasional (FR-07).
+
+    Hanya boleh setelah kas terkunci (ada transaksi), tanggal mengikuti
+    `opening_balance_date`, dan `accounts.opening_balance` tidak diubah.
+    """
+    amount_delta = _correction_delta(delta)
+    reason = (reason or "").strip()
+    if len(reason) < REASON_MIN or len(reason) > REASON_MAX:
+        raise DomainError(
+            messages.REASON_MIN_10,
+            code="reason_min",
+            fields={"reason": messages.REASON_MIN_10},
+        )
+
+    item = Item.objects.filter(code="opening_correction", is_system=True).first()
+    category = Category.objects.filter(code="UMUM").first()
+    if item is None or category is None:
+        raise DomainError("Master koreksi saldo awal belum tersedia.", code="master_missing")
+
+    with transaction.atomic():
+        account = Account.objects.select_for_update().order_by("pk").first()
+        if account is None:
+            raise DomainError("Akun kas belum dibuat.", code="account_missing")
+        if not cash_is_locked():
+            raise DomainError(
+                "Saldo awal belum terkunci; ubah saldo awal secara langsung.",
+                code="opening_not_locked",
+            )
+        assert_date_editable(account.opening_balance_date)
+
+        flow = "income" if amount_delta > 0 else "expense"
+        txn = Transaction.objects.create(
+            date=account.opening_balance_date,
+            flow=flow,
+            category=category,
+            item=item,
+            account=account,
+            currency=account.currency,
+            amount=abs(amount_delta),
+            qty=None,
+            unit=None,
+            payment_method=None,
+            notes=f"[Koreksi saldo awal] {reason}",
+            period_month=None,
+            is_opening_correction=True,
+            created_by=actor if getattr(actor, "pk", None) else None,
+        )
+        log_audit(
+            entity="transaction",
+            entity_id=txn.pk,
+            action="create",
+            actor=actor,
+            after=snapshot(txn, CORRECTION_AUDIT_FIELDS),
+            meta=meta,
+        )
+        return txn

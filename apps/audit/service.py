@@ -6,6 +6,7 @@ import ipaddress
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from uuid import UUID
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
@@ -23,6 +24,8 @@ def serialize_value(value):
         return value.isoformat()
     if isinstance(value, Enum):
         return value.value
+    if isinstance(value, UUID):
+        return str(value)
     if isinstance(value, models.Model):
         return value.pk
     if isinstance(value, dict):

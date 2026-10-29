@@ -2,6 +2,7 @@
 
 from datetime import date
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 
@@ -33,6 +34,20 @@ def test_diff_hanya_mengembalikan_field_yang_berubah():
 
     assert changed_before == {"amount": "6500000.00"}
     assert changed_after == {"amount": "6750000.00"}
+
+
+@pytest.mark.django_db
+def test_log_audit_menyerialkan_uuid():
+    key = uuid4()
+
+    entry = log_audit(
+        entity="transaction",
+        entity_id=1,
+        action="create",
+        after={"idempotency_key": key},
+    )
+
+    assert entry.after == {"idempotency_key": str(key)}
 
 
 @pytest.mark.django_db
