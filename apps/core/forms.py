@@ -1,6 +1,5 @@
 """Form autentikasi. Pesan gagal selalu generik (FR-01)."""
 
-from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 
 

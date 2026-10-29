@@ -26,8 +26,11 @@ services:
     env_file:
       - path: .env
         required: false
+    # Catatan: DJANGO_SETTINGS_MODULE sengaja tidak di-hardcode di sini.
+    # manage.py memakai config.settings.dev secara default, sedangkan pytest
+    # memakai config.settings.test dari pyproject.toml. Set env var ini di
+    # .env/command hanya untuk produksi (config.settings.prod).
     environment:
-      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-insecure-dev-key-change-me}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
