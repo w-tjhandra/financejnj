@@ -1,0 +1,62 @@
+{% extends "onboarding/_wizard_base.html" %}
+
+{% block wizard_content %}
+<form method="post" action="{% url 'setup_stock' %}" novalidate>
+  {% csrf_token %}
+
+  <div class="space-y-5">
+    <fieldset class="rounded-lg border border-slate-200 p-4">
+      <legend class="px-1 text-sm font-semibold text-slate-700">Pakan</legend>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="{{ form.feed_qty.id_for_label }}" class="label">{{ form.feed_qty.label }}</label>
+          {{ form.feed_qty }}
+          {% if form.feed_qty.errors %}<p role="alert" class="mt-1 text-sm text-red-700">{{ form.feed_qty.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.feed_min.id_for_label }}" class="label">{{ form.feed_min.label }} <span class="font-normal text-slate-400">(opsional)</span></label>
+          {{ form.feed_min }}
+          {% if form.feed_min.errors %}<p role="alert" class="mt-1 text-sm text-red-700">{{ form.feed_min.errors|join:" " }}</p>{% endif %}
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="rounded-lg border border-slate-200 p-4">
+      <legend class="px-1 text-sm font-semibold text-slate-700">Telur</legend>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="{{ form.egg_qty.id_for_label }}" class="label">{{ form.egg_qty.label }}</label>
+          {{ form.egg_qty }}
+          {% if form.egg_qty.errors %}<p role="alert" class="mt-1 text-sm text-red-700">{{ form.egg_qty.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.egg_min.id_for_label }}" class="label">{{ form.egg_min.label }} <span class="font-normal text-slate-400">(opsional)</span></label>
+          {{ form.egg_min }}
+          {% if form.egg_min.errors %}<p role="alert" class="mt-1 text-sm text-red-700">{{ form.egg_min.errors|join:" " }}</p>{% endif %}
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="rounded-lg border border-slate-200 p-4">
+      <legend class="px-1 text-sm font-semibold text-slate-700">Kotoran</legend>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="{{ form.manure_qty.id_for_label }}" class="label">{{ form.manure_qty.label }}</label>
+          {{ form.manure_qty }}
+          {% if form.manure_qty.errors %}<p role="alert" class="mt-1 text-sm text-red-700">{{ form.manure_qty.errors|join:" " }}</p>{% endif %}
+        </div>
+        <div>
+          <label for="{{ form.manure_min.id_for_label }}" class="label">{{ form.manure_min.label }} <span class="font-normal text-slate-400">(opsional)</span></label>
+          {{ form.manure_min }}
+          {% if form.manure_min.errors %}<p role="alert" class="mt-1 text-sm text-red-700">{{ form.manure_min.errors|join:" " }}</p>{% endif %}
+        </div>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+    <button type="submit" class="btn w-full sm:w-auto">Lanjut ke ringkasan</button>
+    <a href="{% url 'setup_balance' %}" class="btn w-full bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 sm:w-auto">Kembali</a>
+  </div>
+</form>
+{% endblock %}

@@ -3,11 +3,18 @@
 from django.urls import path
 
 from core import views as core_views
+from onboarding import views as onboarding_views
 from reports import views as reports_views
 
 urlpatterns = [
     path("healthz", core_views.healthz, name="healthz"),
     path("masuk", core_views.LoginView.as_view(), name="login"),
     path("keluar", core_views.logout_view, name="logout"),
+    path("setup", onboarding_views.setup_entry, name="setup"),
+    path("setup/akun", onboarding_views.step_account, name="setup_account"),
+    path("setup/profil", onboarding_views.step_profile, name="setup_profile"),
+    path("setup/saldo", onboarding_views.step_balance, name="setup_balance"),
+    path("setup/stok", onboarding_views.step_stock, name="setup_stock"),
+    path("setup/ringkasan", onboarding_views.step_review, name="setup_review"),
     path("", reports_views.dashboard, name="dashboard"),
 ]

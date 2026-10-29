@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}{{ wizard_title }} · Setup · Telur Finance{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-10">
+  <header class="mb-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Setup awal</p>
+    <h1 class="mt-1 text-2xl font-semibold text-slate-900">{{ wizard_title }}</h1>
+    <p class="mt-1 text-sm text-slate-600">{{ wizard_subtitle }}</p>
+  </header>
+
+  {% include "onboarding/_stepper.html" %}
+
+  <div class="card mt-6">
+    {% if form.non_field_errors %}
+      <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+        {{ form.non_field_errors|join:" " }}
+      </div>
+    {% endif %}
+
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <p role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block wizard_content %}{% endblock %}
+  </div>
+
+  <p class="mt-4 text-center text-xs text-slate-500">Langkah {{ step }} dari 5 · Data tersimpan otomatis di server.</p>
+</div>
+{% endblock %}

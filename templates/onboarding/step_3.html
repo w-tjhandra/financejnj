@@ -1,0 +1,31 @@
+{% extends "onboarding/_wizard_base.html" %}
+
+{% block wizard_content %}
+<form method="post" action="{% url 'setup_balance' %}" novalidate>
+  {% csrf_token %}
+
+  <div class="mb-4">
+    <label for="{{ form.opening_balance.id_for_label }}" class="label">{{ form.opening_balance.label }}</label>
+    {{ form.opening_balance }}
+    {% if form.opening_balance.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.opening_balance.errors|join:" " }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">Saldo kas saat usaha mulai, contoh: 250.000.000</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-6">
+    <label for="{{ form.opening_balance_date.id_for_label }}" class="label">{{ form.opening_balance_date.label }}</label>
+    {{ form.opening_balance_date }}
+    {% if form.opening_balance_date.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.opening_balance_date.errors|join:" " }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">
+        Tidak boleh melebihi hari ini{% if business_start_date %} dan tidak sebelum tanggal mulai usaha{% endif %}.
+      </p>
+    {% endif %}
+  </div>
+
+  <button type="submit" class="btn w-full">Lanjut ke stok awal</button>
+</form>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "onboarding/_wizard_base.html" %}
+
+{% block wizard_content %}
+<dl class="divide-y divide-slate-200">
+  <div class="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3">
+    <dt class="text-sm font-medium text-slate-500">Akun</dt>
+    <dd class="text-sm text-slate-900 sm:col-span-2">
+      {{ user.username }}{% if user.get_full_name %} · {{ user.get_full_name }}{% endif %}
+    </dd>
+  </div>
+
+  <div class="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3">
+    <dt class="text-sm font-medium text-slate-500">Profil usaha</dt>
+    <dd class="text-sm text-slate-900 sm:col-span-2">
+      {{ profile.name }}
+      <span class="block text-xs text-slate-500">Mulai usaha: {{ business_start_display }}</span>
+    </dd>
+  </div>
+
+  <div class="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3">
+    <dt class="text-sm font-medium text-slate-500">Saldo awal</dt>
+    <dd class="text-sm text-slate-900 sm:col-span-2">
+      Rp {{ balance_display }}
+      <span class="block text-xs text-slate-500">Per {{ balance_date_display }}</span>
+    </dd>
+  </div>
+
+  <div class="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3">
+    <dt class="text-sm font-medium text-slate-500">Stok awal</dt>
+    <dd class="text-sm text-slate-900 sm:col-span-2">
+      <ul class="space-y-1">
+        {% for row in stock_rows %}
+          <li>
+            {{ row.name }}: <span class="font-medium tabular-nums">{{ row.qty }} {{ row.unit }}</span>
+            {% if row.threshold %}<span class="text-xs text-slate-500">· ambang {{ row.threshold }} {{ row.unit }}</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </dd>
+  </div>
+</dl>
+
+<p class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/20">
+  Setelah diselesaikan, setup tidak bisa diulang. Master data default akan dibuat otomatis.
+</p>
+
+<form method="post" action="{% url 'setup_review' %}" class="mt-6">
+  {% csrf_token %}
+  <div class="flex flex-col gap-2 sm:flex-row-reverse">
+    <button type="submit" class="btn w-full sm:w-auto">Selesaikan Setup</button>
+    <a href="{% url 'setup_stock' %}" class="btn w-full bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 sm:w-auto">Kembali</a>
+  </div>
+</form>
+{% endblock %}

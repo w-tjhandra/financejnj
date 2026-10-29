@@ -1,0 +1,45 @@
+{% extends "onboarding/_wizard_base.html" %}
+
+{% block wizard_content %}
+<form method="post" action="{% url 'setup_account' %}" novalidate>
+  {% csrf_token %}
+
+  <div class="mb-4">
+    <label for="{{ form.username.id_for_label }}" class="label">{{ form.username.label }}</label>
+    {{ form.username }}
+    {% if form.username.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.username.errors|join:" " }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">3–30 karakter: huruf, angka, titik, atau garis bawah.</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-4">
+    <label for="{{ form.first_name.id_for_label }}" class="label">{{ form.first_name.label }} <span class="font-normal text-slate-400">(opsional)</span></label>
+    {{ form.first_name }}
+    {% if form.first_name.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.first_name.errors|join:" " }}</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-4">
+    <label for="{{ form.password.id_for_label }}" class="label">{{ form.password.label }}</label>
+    {{ form.password }}
+    {% if form.password.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.password.errors|join:" " }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">Minimal 10 karakter dan tidak sama dengan username.</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-6">
+    <label for="{{ form.password_confirm.id_for_label }}" class="label">{{ form.password_confirm.label }}</label>
+    {{ form.password_confirm }}
+    {% if form.password_confirm.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.password_confirm.errors|join:" " }}</p>
+    {% endif %}
+  </div>
+
+  <button type="submit" class="btn w-full">Lanjut ke profil usaha</button>
+</form>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "onboarding/_wizard_base.html" %}
+
+{% block wizard_content %}
+<form method="post" action="{% url 'setup_profile' %}" novalidate>
+  {% csrf_token %}
+
+  <div class="mb-4">
+    <label for="{{ form.name.id_for_label }}" class="label">{{ form.name.label }}</label>
+    {{ form.name }}
+    {% if form.name.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.name.errors|join:" " }}</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-6">
+    <label for="{{ form.business_start_date.id_for_label }}" class="label">{{ form.business_start_date.label }}</label>
+    {{ form.business_start_date }}
+    {% if form.business_start_date.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.business_start_date.errors|join:" " }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">Opsional. Tanggal saldo awal nanti tidak boleh sebelum tanggal ini.</p>
+    {% endif %}
+  </div>
+
+  <button type="submit" class="btn w-full">Lanjut ke saldo awal</button>
+</form>
+{% endblock %}

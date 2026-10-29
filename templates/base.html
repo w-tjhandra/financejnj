@@ -14,11 +14,11 @@
 <body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <a href="#main" class="sr-only rounded-lg bg-white px-4 py-2 text-sm font-semibold text-emerald-800 ring-1 ring-slate-300 focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50">Lewati ke konten</a>
 
-  {% if user.is_authenticated %}
+  {% if user.is_authenticated and not setup_wizard %}
     {% include "partials/nav.html" %}
   {% endif %}
 
-  <main id="main" class="{% if user.is_authenticated %}lg:pl-60{% endif %}">
+  <main id="main" class="{% if user.is_authenticated and not setup_wizard %}lg:pl-60{% endif %}">
     {% if messages %}
       <div class="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6" role="status" aria-live="polite">
         {% for message in messages %}

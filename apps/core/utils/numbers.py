@@ -132,7 +132,7 @@ def format_id_number(value: object, places: int = 2, *, trim: bool = False) -> s
         number = abs(number)
     text = f"{number:,.{places}f}"
     text = text.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
-    if trim and "." in text:
+    if trim and "," in text:
         text = text.rstrip("0").rstrip(",")
     return text
 

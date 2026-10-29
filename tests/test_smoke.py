@@ -5,6 +5,8 @@ import json
 import pytest
 from django.urls import reverse
 
+from tests.conftest import TEST_PASSWORD
+
 
 @pytest.mark.django_db
 def test_healthz_melaporkan_db_ok(client):
@@ -27,7 +29,7 @@ def test_halaman_login_dapat_dibuka_tanpa_login(client):
 
 
 @pytest.mark.django_db
-def test_dashboard_mengalihkan_anonim_ke_login(client):
+def test_dashboard_mengalihkan_anonim_ke_login(client, completed_setup):
     response = client.get(reverse("dashboard"))
 
     assert response.status_code == 302
@@ -35,12 +37,10 @@ def test_dashboard_mengalihkan_anonim_ke_login(client):
 
 
 @pytest.mark.django_db
-def test_login_berhasil_membuka_dashboard(client, django_user_model):
-    django_user_model.objects.create_user(username="pemilik", password="RahasiaKandang2026")
-
+def test_login_berhasil_membuka_dashboard(client, completed_setup):
     response = client.post(
         reverse("login"),
-        {"username": "pemilik", "password": "RahasiaKandang2026"},
+        {"username": "pemilik", "password": TEST_PASSWORD},
         follow=True,
     )
 

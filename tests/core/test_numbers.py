@@ -92,6 +92,8 @@ def test_format_money_dan_qty_id_id():
     assert format_money(Decimal("-1234")) == "-1.234,00"
     assert format_qty(Decimal("1250.5")) == "1.250,5"
     assert format_qty(Decimal("1000.000")) == "1.000"
+    assert format_qty(Decimal("30.000")) == "30"
+    assert format_qty(Decimal("0.000")) == "0"
 
 
 def test_format_round_trip_parse():
