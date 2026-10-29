@@ -222,9 +222,7 @@ def test_resume_setelah_logout_melanjutkan_langkah_aktif(client):
     post_profile(client)
 
     client.post(reverse("logout"))
-    login = client.post(
-        reverse("login"), {"username": "pemilik", "password": PASSWORD}
-    )
+    login = client.post(reverse("login"), {"username": "pemilik", "password": PASSWORD})
     assert login.status_code == 302
 
     response = client.get(reverse("setup"))

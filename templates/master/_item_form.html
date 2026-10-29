@@ -1,0 +1,142 @@
+{% if editing %}
+  <form method="post" action="{% url 'master:item_update' editing.pk %}"
+        hx-post="{% url 'master:item_update' editing.pk %}"
+        hx-target="#item-panel" hx-swap="outerHTML" novalidate>
+{% else %}
+  <form method="post" action="{% url 'master:item_list' %}"
+        hx-post="{% url 'master:item_list' %}"
+        hx-target="#item-panel" hx-swap="outerHTML" novalidate>
+{% endif %}
+  {% csrf_token %}
+
+  <div class="mb-4 flex items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold text-slate-900">
+      {% if editing %}Ubah item{% else %}Tambah item{% endif %}
+    </h2>
+    {% if editing %}
+      <a href="{% url 'master:item_list' %}" class="text-sm font-medium text-emerald-700 hover:underline">Batal</a>
+    {% endif %}
+  </div>
+
+  {% if form.non_field_errors %}
+    <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+      {{ form.non_field_errors|join:" " }}
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="sm:col-span-2">
+      <label for="{{ form.name.id_for_label }}" class="label">Nama item</label>
+      {{ form.name }}
+      {% if form.name.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.name.errors|join:" " }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.flow.id_for_label }}" class="label">Arus</label>
+      {{ form.flow }}
+      {% if form.flow.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.flow.errors|join:" " }}</p>
+      {% elif form.flow.help_text %}
+        <p class="mt-1 text-xs text-amber-800">{{ form.flow.help_text }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.frequency.id_for_label }}" class="label">Frekuensi</label>
+      {{ form.frequency }}
+      {% if form.frequency.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.frequency.errors|join:" " }}</p>
+      {% elif form.frequency.help_text %}
+        <p class="mt-1 text-xs text-amber-800">{{ form.frequency.help_text }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.default_category.id_for_label }}" class="label">Kategori default <span class="font-normal text-slate-400">(opsional)</span></label>
+      {{ form.default_category }}
+      {% if form.default_category.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.default_category.errors|join:" " }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.default_payment_method.id_for_label }}" class="label">Metode bayar default <span class="font-normal text-slate-400">(opsional)</span></label>
+      {{ form.default_payment_method }}
+      {% if form.default_payment_method.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.default_payment_method.errors|join:" " }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-5 rounded-lg border border-slate-200 p-4"
+       x-data="{ hasStock: {% if form.has_stock.value %}true{% else %}false{% endif %}, unit: '{{ form.unit.value|default:''|escapejs }}' }">
+    <div class="flex items-center gap-3">
+      {{ form.has_stock }}
+      <label for="{{ form.has_stock.id_for_label }}" class="text-sm font-medium text-slate-700">Terkait stok</label>
+    </div>
+    {% if form.has_stock.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.has_stock.errors|join:" " }}</p>
+    {% elif form.has_stock.help_text %}
+      <p class="mt-1 text-xs text-amber-800">{{ form.has_stock.help_text }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">
+        Item pemasukan dengan stok mengurangi stok (keluar); item pengeluaran dengan stok menambah stok (masuk).
+      </p>
+    {% endif %}
+
+    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div x-show="hasStock" x-cloak>
+        <label for="{{ form.stock_item.id_for_label }}" class="label">Jenis stok</label>
+        <select name="stock_item" id="{{ form.stock_item.id_for_label }}" class="input"
+                x-ref="stock"
+                x-bind:disabled="!hasStock || {{ form.stock_item.field.disabled|yesno:'true,false' }}"
+                @change="if (hasStock) { var option = $refs.stock.selectedOptions[0]; if (option) { unit = option.dataset.unit || ''; } }">
+          <option value="">— Pilih jenis stok —</option>
+          {% for stock in form.stock_item.field.queryset %}
+            <option value="{{ stock.pk }}" data-unit="{{ stock.unit }}"
+              {% if form.stock_item.value|stringformat:"s" == stock.pk|stringformat:"s" %}selected{% endif %}>
+              {{ stock.name }} ({{ stock.unit }})
+            </option>
+          {% endfor %}
+        </select>
+        {% if form.stock_item.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.stock_item.errors|join:" " }}</p>
+        {% elif form.stock_item.help_text %}
+          <p class="mt-1 text-xs text-amber-800">{{ form.stock_item.help_text }}</p>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="{{ form.unit.id_for_label }}" class="label">
+          Satuan
+          <span class="font-normal text-slate-400" x-show="hasStock">(mengikuti jenis stok)</span>
+          <span class="font-normal text-slate-400" x-show="!hasStock">(opsional)</span>
+        </label>
+        <input type="text" name="unit" id="{{ form.unit.id_for_label }}" class="input"
+               maxlength="10" autocomplete="off" placeholder="mis. kg, ekor"
+               x-model="unit" x-bind:readonly="hasStock">
+        {% if form.unit.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.unit.errors|join:" " }}</p>
+        {% else %}
+          <p class="mt-1 text-xs text-slate-500">Qty item tanpa stok bersifat informasional.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 max-w-[10rem]">
+    <label for="{{ form.sort_order.id_for_label }}" class="label">Urutan</label>
+    {{ form.sort_order }}
+    {% if form.sort_order.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.sort_order.errors|join:" " }}</p>
+    {% endif %}
+  </div>
+
+  <div class="mt-6">
+    <button type="submit" class="btn w-full sm:w-auto">
+      {% if editing %}Simpan perubahan{% else %}Tambah item{% endif %}
+    </button>
+  </div>
+</form>

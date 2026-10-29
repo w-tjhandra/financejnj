@@ -1,0 +1,97 @@
+<table class="w-full min-w-[56rem] text-left text-sm">
+  <caption class="sr-only">Daftar item transaksi</caption>
+  <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+    <tr>
+      <th scope="col" class="px-3 py-2 font-semibold">Nama</th>
+      <th scope="col" class="px-3 py-2 font-semibold">Arus</th>
+      <th scope="col" class="px-3 py-2 font-semibold">Frekuensi</th>
+      <th scope="col" class="px-3 py-2 font-semibold">Kategori default</th>
+      <th scope="col" class="px-3 py-2 font-semibold">Stok</th>
+      <th scope="col" class="px-3 py-2 font-semibold">Metode</th>
+      <th scope="col" class="px-3 py-2 font-semibold text-right">Dipakai</th>
+      <th scope="col" class="px-3 py-2 font-semibold">Status</th>
+      <th scope="col" class="px-3 py-2 font-semibold"><span class="sr-only">Aksi</span></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-slate-100">
+    {% for item in items %}
+      <tr>
+        <td class="px-3 py-3">
+          <span class="font-medium text-slate-900">{{ item.name }}</span>
+          {% if item.is_system %}<span class="badge ml-1">Sistem</span>{% endif %}
+        </td>
+        <td class="whitespace-nowrap px-3 py-3 text-slate-600">{{ item.get_flow_display }}</td>
+        <td class="whitespace-nowrap px-3 py-3 text-slate-600">{{ item.get_frequency_display }}</td>
+        <td class="px-3 py-3 text-slate-600">{{ item.default_category.name|default:"—" }}</td>
+        <td class="px-3 py-3 text-slate-600">
+          {% if item.stock_item %}
+            {{ item.stock_item.name }}
+            <span class="text-xs text-slate-500">({{ item.unit }})</span>
+            {% if item.flow == "income" %}
+              <span class="text-xs text-slate-500">keluar</span>
+            {% else %}
+              <span class="text-xs text-slate-500">masuk</span>
+            {% endif %}
+          {% else %}
+            <span class="text-slate-400">—</span>
+          {% endif %}
+        </td>
+        <td class="whitespace-nowrap px-3 py-3 text-slate-600">
+          {% if item.default_payment_method %}{{ item.get_default_payment_method_display }}{% else %}—{% endif %}
+        </td>
+        <td class="px-3 py-3 text-right tabular-nums text-slate-600">{{ item.transaction_count }}</td>
+        <td class="px-3 py-3">
+          {% if item.is_active %}
+            <span class="badge">Aktif</span>
+          {% else %}
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-300">Nonaktif</span>
+          {% endif %}
+          {% if item.transaction_count %}
+            <span class="ml-1 text-xs text-slate-500">terpakai</span>
+          {% endif %}
+        </td>
+        <td class="whitespace-nowrap px-3 py-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'master:item_update' item.pk %}"
+               hx-get="{% url 'master:item_update' item.pk %}"
+               hx-target="#item-form-shell" hx-swap="innerHTML"
+               class="text-sm font-medium text-emerald-700 hover:underline">Ubah</a>
+
+            {% if not item.is_system %}
+              {% if item.is_active %}
+                <form method="post" action="{% url 'master:item_deactivate' item.pk %}"
+                      hx-post="{% url 'master:item_deactivate' item.pk %}"
+                      hx-target="#item-panel" hx-swap="outerHTML"
+                      hx-confirm="Nonaktifkan item ini?"
+                      onsubmit="return confirm('Nonaktifkan item ini?')">
+                  {% csrf_token %}
+                  <button type="submit" class="text-sm font-medium text-amber-800 hover:underline">Nonaktifkan</button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'master:item_activate' item.pk %}"
+                      hx-post="{% url 'master:item_activate' item.pk %}"
+                      hx-target="#item-panel" hx-swap="outerHTML">
+                  {% csrf_token %}
+                  <button type="submit" class="text-sm font-medium text-emerald-700 hover:underline">Aktifkan</button>
+                </form>
+              {% endif %}
+
+              <form method="post" action="{% url 'master:item_delete' item.pk %}"
+                    hx-post="{% url 'master:item_delete' item.pk %}"
+                    hx-target="#item-panel" hx-swap="outerHTML"
+                    hx-confirm="Hapus item ini? Tindakan ini tidak bisa dibatalkan."
+                    onsubmit="return confirm('Hapus item ini? Tindakan ini tidak bisa dibatalkan.')">
+                {% csrf_token %}
+                <button type="submit" class="text-sm font-medium text-red-700 hover:underline">Hapus</button>
+              </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="9" class="px-3 py-8 text-center text-slate-500">Belum ada item.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

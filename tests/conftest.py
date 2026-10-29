@@ -14,9 +14,7 @@ TEST_PASSWORD = "RahasiaKandang2026"
 
 @pytest.fixture
 def completed_setup(db, django_user_model):
-    user = django_user_model.objects.create_user(
-        username="pemilik", password=TEST_PASSWORD
-    )
+    user = django_user_model.objects.create_user(username="pemilik", password=TEST_PASSWORD)
     CompanyProfile.objects.create(
         name="Telur Jaya Farm",
         business_start_date=date(2026, 9, 1),

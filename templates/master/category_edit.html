@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Ubah kategori · Telur Finance{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Pengaturan · Kategori</p>
+    <h1 class="mt-1 text-2xl font-semibold text-slate-900">Ubah kategori</h1>
+    <p class="mt-1 text-sm text-slate-600">Perubahan berlaku untuk transaksi berikutnya tanpa mengubah riwayat.</p>
+  </header>
+
+  <section id="category-panel">
+    <div class="card">
+      {% include "master/_category_form.html" %}
+    </div>
+  </section>
+
+  <p class="mt-4">
+    <a href="{% url 'master:category_list' %}" class="text-sm font-medium text-emerald-700 hover:underline">← Kembali ke daftar kategori</a>
+  </p>
+</div>
+{% endblock %}

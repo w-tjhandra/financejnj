@@ -1,6 +1,6 @@
 """URL utama. Setiap layar baru didaftarkan di sini saat app-nya diisi."""
 
-from django.urls import path
+from django.urls import include, path
 
 from core import views as core_views
 from onboarding import views as onboarding_views
@@ -11,6 +11,7 @@ urlpatterns = [
     path("masuk", core_views.LoginView.as_view(), name="login"),
     path("keluar", core_views.logout_view, name="logout"),
     path("pengaturan/akun", core_views.account_settings, name="account_settings"),
+    path("pengaturan/", include("master.urls")),
     path("setup", onboarding_views.setup_entry, name="setup"),
     path("setup/akun", onboarding_views.step_account, name="setup_account"),
     path("setup/profil", onboarding_views.step_profile, name="setup_profile"),

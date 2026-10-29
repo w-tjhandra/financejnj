@@ -1,0 +1,15 @@
+<section id="item-panel" class="space-y-6">
+  {% if action_error %}
+    <div role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+      {{ action_error }}
+    </div>
+  {% endif %}
+
+  <div class="card" id="item-form-shell">
+    {% include "master/_item_form.html" %}
+  </div>
+
+  <div class="card overflow-x-auto">
+    {% include "master/_item_rows.html" %}
+  </div>
+</section>

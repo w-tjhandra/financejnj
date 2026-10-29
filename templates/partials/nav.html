@@ -13,6 +13,16 @@
         </a>
       </li>
       <li>
+        <a href="{% url 'master:category_list' %}" class="nav-link" {% if request.resolver_match.url_name == 'category_list' or request.resolver_match.url_name == 'category_update' %}aria-current="page"{% endif %}>
+          Kategori
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'master:item_list' %}" class="nav-link" {% if request.resolver_match.url_name == 'item_list' or request.resolver_match.url_name == 'item_update' %}aria-current="page"{% endif %}>
+          Item
+        </a>
+      </li>
+      <li>
         <a href="{% url 'account_settings' %}" class="nav-link" {% if request.resolver_match.url_name == 'account_settings' %}aria-current="page"{% endif %}>
           Pengaturan akun
         </a>

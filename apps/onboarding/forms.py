@@ -53,24 +53,18 @@ class AccountSetupForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "input", "autocomplete": "name"}),
     )
     password = forms.CharField(
-        widget=forms.PasswordInput(
-            attrs={"class": "input", "autocomplete": "new-password"}
-        )
+        widget=forms.PasswordInput(attrs={"class": "input", "autocomplete": "new-password"})
     )
     password_confirm = forms.CharField(
         label="Konfirmasi password",
-        widget=forms.PasswordInput(
-            attrs={"class": "input", "autocomplete": "new-password"}
-        ),
+        widget=forms.PasswordInput(attrs={"class": "input", "autocomplete": "new-password"}),
     )
 
     def clean_username(self) -> str:
         username = (self.cleaned_data["username"] or "").strip()
         if not username:
             raise ValidationError(setup_messages.USERNAME_REQUIRED)
-        if not (USERNAME_MIN <= len(username) <= USERNAME_MAX) or not USERNAME_RE.match(
-            username
-        ):
+        if not (USERNAME_MIN <= len(username) <= USERNAME_MAX) or not USERNAME_RE.match(username):
             raise ValidationError(setup_messages.USERNAME_FORMAT)
         if get_user_model().objects.filter(username__iexact=username).exists():
             raise ValidationError(setup_messages.USERNAME_TAKEN)
@@ -124,9 +118,7 @@ class ProfileSetupForm(forms.Form):
 class BalanceSetupForm(forms.Form):
     opening_balance = forms.CharField(
         label="Saldo awal",
-        widget=forms.TextInput(
-            attrs={"class": "input", "inputmode": "decimal", "autofocus": True}
-        ),
+        widget=forms.TextInput(attrs={"class": "input", "inputmode": "decimal", "autofocus": True}),
     )
     opening_balance_date = forms.CharField(
         label="Tanggal saldo awal",

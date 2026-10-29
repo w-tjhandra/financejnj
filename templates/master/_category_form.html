@@ -1,0 +1,70 @@
+{% if editing %}
+  <form method="post" action="{% url 'master:category_update' editing.pk %}"
+        hx-post="{% url 'master:category_update' editing.pk %}"
+        hx-target="#category-panel" hx-swap="outerHTML" novalidate>
+{% else %}
+  <form method="post" action="{% url 'master:category_list' %}"
+        hx-post="{% url 'master:category_list' %}"
+        hx-target="#category-panel" hx-swap="outerHTML" novalidate>
+{% endif %}
+  {% csrf_token %}
+
+  <div class="mb-4 flex items-center justify-between gap-3">
+    <h2 class="text-lg font-semibold text-slate-900">
+      {% if editing %}Ubah kategori{% else %}Tambah kategori{% endif %}
+    </h2>
+    {% if editing %}
+      <a href="{% url 'master:category_list' %}" class="text-sm font-medium text-emerald-700 hover:underline">Batal</a>
+    {% endif %}
+  </div>
+
+  {% if form.non_field_errors %}
+    <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+      {{ form.non_field_errors|join:" " }}
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <label for="{{ form.code.id_for_label }}" class="label">Kode</label>
+      {{ form.code }}
+      {% if form.code.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.code.errors|join:" " }}</p>
+      {% elif form.code.help_text %}
+        <p class="mt-1 text-xs text-slate-500">{{ form.code.help_text }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.name.id_for_label }}" class="label">Nama</label>
+      {{ form.name }}
+      {% if form.name.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.name.errors|join:" " }}</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.parent.id_for_label }}" class="label">Induk <span class="font-normal text-slate-400">(opsional)</span></label>
+      {{ form.parent }}
+      {% if form.parent.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.parent.errors|join:" " }}</p>
+      {% else %}
+        <p class="mt-1 text-xs text-slate-500">Maksimal satu tingkat. Induk harus kategori tanpa induk.</p>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.sort_order.id_for_label }}" class="label">Urutan</label>
+      {{ form.sort_order }}
+      {% if form.sort_order.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.sort_order.errors|join:" " }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-6">
+    <button type="submit" class="btn w-full sm:w-auto">
+      {% if editing %}Simpan perubahan{% else %}Tambah kategori{% endif %}
+    </button>
+  </div>
+</form>

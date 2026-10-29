@@ -6,6 +6,9 @@
   html {
     @apply h-full scroll-smooth;
   }
+  [x-cloak] {
+    display: none !important;
+  }
   body {
     @apply min-h-full bg-slate-50 font-sans text-slate-900 antialiased;
   }

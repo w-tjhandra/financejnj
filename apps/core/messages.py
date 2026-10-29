@@ -25,9 +25,24 @@ CATEGORY_SYSTEM = "Kategori sistem tidak bisa dihapus."
 CATEGORY_IN_USE = "Kategori sudah dipakai {count} transaksi. Nonaktifkan saja."
 CATEGORY_CODE_TAKEN = "Kode kategori sudah dipakai"
 CATEGORY_DEPTH = "Maksimal satu tingkat."
+CATEGORY_REQUIRED = "Kode dan nama kategori wajib diisi."
+CATEGORY_HAS_CHILDREN = "Kategori masih punya subkategori."
+CATEGORY_PARENT_INACTIVE = "Induk kategori tidak aktif."
+CATEGORY_USED_LOCKED = "Kategori dipakai pada periode terkunci ({month} {year})."
 ITEM_STOCK_UNIT = "Item terkait stok wajib memilih jenis stok."
-STOCK_OPENING_LOCKED = "Terkunci sejak {date} (ada mutasi stok). Gunakan penyesuaian untuk koreksi."
+ITEM_NAME_TAKEN = "Nama item sudah dipakai untuk arus ini."
+ITEM_SYSTEM = "Item sistem tidak bisa dihapus."
+ITEM_IN_USE = "Item sudah dipakai {count} transaksi. Nonaktifkan saja."
 ITEM_USED_LOCKED = "Item dipakai pada periode terkunci ({month} {year})."
+ITEM_USED_NOTE = "Sudah dipakai {count} transaksi"
+ITEM_USED_FIELD_LOCKED = "Item sudah dipakai {count} transaksi; {field} tidak bisa diubah."
+ITEM_STOCK_DIRECTION = "Arah stok tidak sesuai arus item."
+ITEM_FLOW_INVALID = "Arus item tidak valid."
+ITEM_FREQUENCY_INVALID = "Frekuensi item tidak valid."
+ITEM_CATEGORY_INACTIVE = "Kategori default tidak aktif."
+STOCK_UNIT_FIXED = "Satuan stok tidak bisa diubah."
+STOCK_NOT_FOUND = "Jenis stok tidak ditemukan."
+STOCK_OPENING_LOCKED = "Terkunci sejak {date} (ada mutasi stok). Gunakan penyesuaian untuk koreksi."
 
 # --- Saldo awal & tanggal -------------------------------------------------
 DATE_AFTER_TODAY = "Tanggal saldo awal tidak boleh melebihi hari ini."
@@ -101,6 +116,10 @@ def unlock_latest_first(period: date) -> str:
 
 def item_used_locked(period: date) -> str:
     return ITEM_USED_LOCKED.format(**_period_parts(period))
+
+
+def category_used_locked(period: date) -> str:
+    return CATEGORY_USED_LOCKED.format(**_period_parts(period))
 
 
 def date_before_business_start(value: date) -> str:

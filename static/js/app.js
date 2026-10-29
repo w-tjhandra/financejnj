@@ -6,6 +6,25 @@
 (function () {
   "use strict";
 
+  // Form master memakai 400/422 untuk error validasi. HTMX secara default
+  // tidak menukar respons non-2xx; izinkan agar pesan error tampil di panel.
+  document.addEventListener("htmx:beforeSwap", function (event) {
+    var status = event.detail.xhr.status;
+    if (status === 400 || status === 409 || status === 422) {
+      event.detail.shouldSwap = true;
+      event.detail.isError = false;
+    }
+  });
+
+  // HX-Trigger: {"toast": {"msg": "..."}} dari view.
+  document.body.addEventListener("toast", function (event) {
+    var message = event.detail && event.detail.msg;
+    if (!message || !window.Alpine) {
+      return;
+    }
+    window.Alpine.store("toasts").push(message, 4000);
+  });
+
   document.addEventListener("alpine:init", function () {
     window.Alpine.store("toasts", {
       items: [],

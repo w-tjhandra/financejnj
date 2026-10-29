@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Ubah item · Telur Finance{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Pengaturan · Item</p>
+    <h1 class="mt-1 text-2xl font-semibold text-slate-900">Ubah item</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      {% if can_change_rules %}
+        Perubahan berlaku untuk transaksi berikutnya tanpa mengubah riwayat.
+      {% else %}
+        Item sudah dipakai transaksi: arus, jenis stok, dan frekuensi dikunci.
+      {% endif %}
+    </p>
+  </header>
+
+  <section id="item-panel">
+    <div class="card">
+      {% include "master/_item_form.html" %}
+    </div>
+  </section>
+
+  <p class="mt-4">
+    <a href="{% url 'master:item_list' %}" class="text-sm font-medium text-emerald-700 hover:underline">← Kembali ke daftar item</a>
+  </p>
+</div>
+{% endblock %}
