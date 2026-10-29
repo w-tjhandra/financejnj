@@ -1,8 +1,9 @@
-"""Form saldo awal S-17 (hanya saat kas belum terkunci)."""
+"""Form saldo awal S-17 dan form transaksi S-05."""
 
 from __future__ import annotations
 
-from datetime import date
+import re
+from datetime import date, datetime
 from decimal import Decimal
 
 from django import forms
@@ -10,9 +11,16 @@ from django.core.exceptions import ValidationError
 
 from core import messages
 from core.errors import DomainError
-from core.utils.dates import today_wib
-from core.utils.numbers import parse_id_number
+from core.utils.dates import month_start, today_wib
+from core.utils.numbers import format_id_number, format_money, parse_id_number
 from ledger.services.opening import MONEY_MAX
+from ledger.services.transactions import QTY_MAX
+from master.models import FLOW_CHOICES, PAYMENT_METHOD_CHOICES, Category, Item
+from master.services.items import active_items
+
+DATE_INPUT_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y")
+MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
+PAYMENT_METHOD_FORM_CHOICES = [("", "— Pilih —"), *PAYMENT_METHOD_CHOICES]
 
 
 class OpeningBalanceForm(forms.Form):
@@ -64,3 +72,295 @@ class OpeningBalanceForm(forms.Form):
         if self.business_start_date is not None and value < self.business_start_date:
             raise ValidationError(messages.date_before_business_start(self.business_start_date))
         return value
+
+
+class TransactionForm(forms.Form):
+    """Form transaksi S-05 (baru/edit).
+
+    Form hanya memvalidasi bentuk dan menormalisasi input id-ID. Invariant
+    lintas tabel (stok, kunci periode, unik gaji) tetap milik service.
+    """
+
+    date = forms.CharField(
+        label="Tanggal",
+        widget=forms.TextInput(attrs={"class": "input", "type": "date"}),
+        error_messages={"required": "Tanggal wajib diisi."},
+    )
+    flow = forms.ChoiceField(
+        choices=FLOW_CHOICES,
+        label="Arus",
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    item = forms.ModelChoiceField(
+        queryset=Item.objects.none(),
+        label="Item",
+        empty_label="— Pilih item —",
+        widget=forms.Select(
+            attrs={
+                "class": "input",
+                "hx-get": "/transaksi/field-item",
+                "hx-trigger": "change",
+                "hx-target": "#item-fields",
+                "hx-include": "#id_item, #id_date, #id_flow",
+                "hx-swap": "innerHTML",
+            }
+        ),
+        error_messages={
+            "required": "Item wajib dipilih.",
+            "invalid_choice": messages.ITEM_FLOW_INVALID,
+        },
+    )
+    category = forms.ModelChoiceField(
+        queryset=Category.objects.none(),
+        label="Kategori",
+        empty_label="— Pilih kategori —",
+        widget=forms.Select(attrs={"class": "input"}),
+        error_messages={
+            "required": "Kategori wajib dipilih.",
+            "invalid_choice": "Kategori tidak valid.",
+        },
+    )
+    amount = forms.CharField(
+        label="Nominal",
+        widget=forms.TextInput(
+            attrs={
+                "class": "input",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+                "placeholder": "mis. 520.000",
+            }
+        ),
+        error_messages={"required": messages.NUMBER_INVALID.format(field="Nominal")},
+    )
+    qty = forms.CharField(
+        required=False,
+        label="Qty",
+        widget=forms.TextInput(
+            attrs={
+                "class": "input",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+                "placeholder": "mis. 20",
+            }
+        ),
+    )
+    unit = forms.CharField(
+        required=False,
+        max_length=10,
+        label="Satuan",
+        widget=forms.TextInput(
+            attrs={
+                "class": "input",
+                "autocomplete": "off",
+                "placeholder": "mis. kg, ekor",
+            }
+        ),
+    )
+    payment_method = forms.ChoiceField(
+        required=False,
+        choices=PAYMENT_METHOD_FORM_CHOICES,
+        label="Metode bayar",
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    notes = forms.CharField(
+        required=False,
+        max_length=500,
+        label="Keterangan",
+        widget=forms.Textarea(
+            attrs={
+                "class": "input min-h-[5rem]",
+                "rows": 3,
+                "placeholder": "Opsional, maksimum 500 karakter.",
+            }
+        ),
+        error_messages={"max_length": "Keterangan maksimum 500 karakter."},
+    )
+    period_month = forms.CharField(
+        required=False,
+        label="Bulan gaji",
+        widget=forms.TextInput(attrs={"class": "input", "type": "month"}),
+    )
+
+    def __init__(
+        self,
+        *args,
+        instance=None,
+        read_only: bool = False,
+        **kwargs,
+    ) -> None:
+        self.instance = instance
+        self.read_only = read_only
+        initial = dict(kwargs.pop("initial", None) or {})
+        data = kwargs.get("data")
+        if data is None and args:
+            data = args[0]
+        flow = self._raw_value(data, initial, "flow")
+        if not flow:
+            flow = instance.flow if instance is not None else "expense"
+            initial.setdefault("flow", flow)
+        item_value = self._raw_value(data, initial, "item")
+        item = self._resolve_item(item_value)
+
+        if item is not None:
+            initial.setdefault("item", item.pk)
+            if not self._raw_value(data, initial, "category") and item.default_category_id:
+                initial.setdefault("category", item.default_category_id)
+            if not self._raw_value(data, initial, "payment_method"):
+                initial.setdefault("payment_method", item.default_payment_method or "")
+            if item.frequency == "monthly" and not self._raw_value(data, initial, "period_month"):
+                period = self._default_period(initial, data).strftime("%Y-%m")
+                initial.setdefault("period_month", period)
+        initial.setdefault("date", today_wib().isoformat())
+
+        super().__init__(*args, initial=initial, **kwargs)
+
+        self.fields["date"].widget.attrs["max"] = today_wib().isoformat()
+        self.fields["flow"].widget.attrs.update(
+            {
+                "hx-get": "/transaksi/opsi-item",
+                "hx-trigger": "change",
+                "hx-target": "#id_item",
+                "hx-include": "this",
+                "hx-swap": "innerHTML",
+            }
+        )
+
+        category_queryset = Category.objects.filter(is_active=True).order_by("sort_order", "id")
+        if instance is not None and instance.category_id is not None:
+            category_queryset = category_queryset | Category.objects.filter(pk=instance.category_id)
+        self.fields["category"].queryset = category_queryset.order_by("sort_order", "id")
+
+        item_queryset = active_items(flow=flow)
+        if instance is not None and instance.item_id is not None:
+            item_queryset = item_queryset | Item.objects.filter(pk=instance.item_id)
+        self.fields["item"].queryset = item_queryset.order_by("sort_order", "id")
+
+        if item is not None and item.stock_item_id is not None:
+            self.fields["unit"].widget.attrs["readonly"] = True
+            self.fields["unit"].help_text = f"Mengikuti satuan stok ({item.stock_item.unit})."
+        if read_only:
+            self.disable_all()
+
+    @staticmethod
+    def _raw_value(data, initial: dict, name: str):
+        if data is not None:
+            return data.get(name)
+        value = initial.get(name)
+        if isinstance(value, Item) or isinstance(value, Category):
+            return value.pk
+        return value
+
+    @staticmethod
+    def _resolve_item(value) -> Item | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, Item):
+            return value
+        try:
+            return Item.objects.select_related("stock_item").filter(pk=int(value)).first()
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _default_period(initial: dict, data) -> date:
+        raw = (data.get("date") if data is not None else None) or initial.get("date")
+        for value in (raw, today_wib()):
+            if isinstance(value, date):
+                return month_start(value)
+            try:
+                return month_start(date.fromisoformat(str(value)))
+            except (TypeError, ValueError):
+                continue
+        return month_start(today_wib())
+
+    @property
+    def selected_item(self) -> Item | None:
+        value = self.data.get("item") if self.is_bound else self.initial.get("item")
+        return self._resolve_item(value)
+
+    def disable_all(self) -> None:
+        for field in self.fields.values():
+            field.disabled = True
+
+    def clean_date(self) -> date:
+        raw = (self.cleaned_data.get("date") or "").strip()
+        for fmt in DATE_INPUT_FORMATS:
+            try:
+                return datetime.strptime(raw, fmt).date()
+            except ValueError:
+                continue
+        raise ValidationError(messages.DATE_INVALID)
+
+    def clean_amount(self) -> Decimal:
+        try:
+            return parse_id_number(
+                self.cleaned_data["amount"],
+                places=2,
+                field="Nominal",
+                min_value=Decimal("0.01"),
+                max_value=MONEY_MAX,
+            )
+        except DomainError as exc:
+            raise ValidationError(exc.message) from exc
+
+    def clean_qty(self) -> Decimal | None:
+        raw = (self.cleaned_data.get("qty") or "").strip()
+        if not raw:
+            return None
+        try:
+            return parse_id_number(
+                raw,
+                places=3,
+                field="Qty",
+                min_value=Decimal("0.001"),
+                max_value=QTY_MAX,
+            )
+        except DomainError as exc:
+            raise ValidationError(exc.message) from exc
+
+    def clean_unit(self) -> str | None:
+        text = (self.cleaned_data.get("unit") or "").strip()
+        return text or None
+
+    def clean_period_month(self) -> date | None:
+        raw = (self.cleaned_data.get("period_month") or "").strip()
+        if not raw:
+            return None
+        try:
+            if MONTH_RE.match(raw):
+                year, month = (int(part) for part in raw.split("-"))
+                return date(year, month, 1)
+            return month_start(date.fromisoformat(raw))
+        except ValueError as exc:
+            raise ValidationError(messages.PERIOD_INVALID) from exc
+
+    def clean_notes(self) -> str:
+        return (self.cleaned_data.get("notes") or "").strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        flow = cleaned.get("flow")
+        item = cleaned.get("item")
+        if flow and item is not None and item.flow != flow:
+            self.add_error("item", messages.ITEM_FLOW_INVALID)
+        if item is not None and item.stock_item_id is not None:
+            cleaned["unit"] = item.stock_item.unit
+        if item is not None and not cleaned.get("payment_method"):
+            cleaned["payment_method"] = item.default_payment_method or None
+        return cleaned
+
+
+def transaction_initial(txn) -> dict:
+    """Nilai awal form edit dari transaksi tersimpan (angka gaya id-ID)."""
+    return {
+        "date": txn.date.isoformat(),
+        "flow": txn.flow,
+        "category": txn.category_id,
+        "item": txn.item_id,
+        "amount": format_money(txn.amount),
+        "qty": format_id_number(txn.qty, 3, trim=True) if txn.qty is not None else "",
+        "unit": txn.unit or "",
+        "payment_method": txn.payment_method or "",
+        "notes": txn.notes,
+        "period_month": txn.period_month.strftime("%Y-%m") if txn.period_month else "",
+    }

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == "edit" %}Ubah transaksi{% else %}Catat transaksi{% endif %} · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Transaksi</p>
+    <h1 class="mt-1 text-2xl font-semibold text-slate-900">
+      {% if mode == "edit" %}Ubah transaksi{% else %}Catat transaksi{% endif %}
+    </h1>
+    <p class="mt-1 text-sm text-slate-600">
+      {% if mode == "edit" %}
+        Perubahan qty atau tanggal ikut menyesuaikan stok dan saldo berikutnya.
+      {% else %}
+        Transaksi ber-stok otomatis membuat pergerakan stok.
+      {% endif %}
+    </p>
+  </header>
+
+  {% if duplicate_banner %}
+    <div role="status" class="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/30">
+      {{ duplicate_banner }}
+    </div>
+  {% endif %}
+
+  {% if read_only %}
+    <div role="status" class="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/30">
+      Transaksi ini berada pada periode terkunci. Semua field hanya bisa dilihat.
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <form method="post"
+          action="{% if mode == 'edit' %}{% url 'transaction_update' txn.pk %}{% else %}{% url 'transaction_create' %}{% endif %}"
+          novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+          {{ form.non_field_errors|join:" " }}
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="{{ form.date.id_for_label }}" class="label">Tanggal</label>
+          {{ form.date }}
+          {% if form.date.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.date.errors|join:" " }}</p>
+          {% else %}
+            <p class="mt-1 text-xs text-slate-500">Tidak boleh melebihi hari ini (WIB).</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.flow.id_for_label }}" class="label">Arus</label>
+          {{ form.flow }}
+          {% if form.flow.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.flow.errors|join:" " }}</p>
+          {% endif %}
+        </div>
+
+        <div class="sm:col-span-2">
+          <label for="{{ form.item.id_for_label }}" class="label">Item</label>
+          {{ form.item }}
+          {% if form.item.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.item.errors|join:" " }}</p>
+          {% else %}
+            <p class="mt-1 text-xs text-slate-500">Pilihan item mengikuti arus yang dipilih.</p>
+          {% endif %}
+        </div>
+
+        <div id="item-fields" class="sm:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {% include "ledger/_item_fields.html" %}
+        </div>
+
+        <div>
+          <label for="{{ form.amount.id_for_label }}" class="label">Nominal (Rp)</label>
+          {{ form.amount }}
+          {% if form.amount.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.amount.errors|join:" " }}</p>
+          {% else %}
+            <p class="mt-1 text-xs text-slate-500">Gunakan format Indonesia, mis. 520.000,00.</p>
+          {% endif %}
+        </div>
+
+        <div class="sm:col-span-2">
+          <label for="{{ form.notes.id_for_label }}" class="label">Keterangan <span class="font-normal text-slate-400">(opsional)</span></label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.notes.errors|join:" " }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+        {% if not read_only %}
+          <button type="submit" class="btn w-full sm:w-auto">
+            {% if mode == "edit" %}Simpan perubahan{% else %}Simpan transaksi{% endif %}
+          </button>
+        {% endif %}
+        <a href="{% if mode == 'edit' %}{% url 'transaction_detail' txn.pk %}{% else %}{% url 'dashboard' %}{% endif %}"
+           class="btn btn-secondary w-full sm:w-auto">Batal</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

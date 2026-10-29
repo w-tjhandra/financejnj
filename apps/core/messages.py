@@ -59,6 +59,14 @@ OPENING_BALANCE_SAVED = "Saldo awal disimpan."
 DATE_BEFORE_OPENING = "Tanggal transaksi tidak boleh sebelum tanggal saldo awal ({date})."
 TXN_DATE_AFTER_TODAY = "Tanggal tidak boleh melebihi hari ini."
 TRANSACTION_NOT_FOUND = "Transaksi tidak ditemukan."
+TRANSACTION_CREATED = "Transaksi disimpan."
+TRANSACTION_UPDATED = "Transaksi diperbarui."
+TRANSACTION_DELETED = "Transaksi dihapus."
+TRANSACTION_CORRECTION_READONLY = "Transaksi koreksi saldo awal bersifat read-only."
+SALARY_DUPLICATE_BANNER = (
+    "Gaji {category} {month} sudah tercatat. Perubahan akan menggantikan nilai sebelumnya."
+)
+PERIOD_INVALID = "Format bulan gaji tidak valid."
 
 # --- Angka ----------------------------------------------------------------
 NUMBER_INVALID = "{field} harus berupa angka."

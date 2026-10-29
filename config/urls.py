@@ -25,6 +25,7 @@ urlpatterns = [
     ),
     path("pengaturan/", include("master.urls")),
     path("pengaturan/", include("stock.urls")),
+    path("transaksi/", include("ledger.urls")),
     path("setup", onboarding_views.setup_entry, name="setup"),
     path("setup/akun", onboarding_views.step_account, name="setup_account"),
     path("setup/profil", onboarding_views.step_profile, name="setup_profile"),

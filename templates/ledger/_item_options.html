@@ -1,0 +1,10 @@
+<option value="">— Pilih item —</option>
+{% for item in items %}
+  <option value="{{ item.pk }}"
+          data-flow="{{ item.flow }}"
+          data-has-stock="{% if item.stock_item_id %}1{% else %}0{% endif %}"
+          data-unit="{{ item.unit|default:'' }}"
+          data-payment="{{ item.default_payment_method|default:'' }}">
+    {{ item.name }}
+  </option>
+{% endfor %}

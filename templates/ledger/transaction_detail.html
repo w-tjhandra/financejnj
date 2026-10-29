@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Detail transaksi · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Transaksi</p>
+      <h1 class="mt-1 text-2xl font-semibold text-slate-900">Detail transaksi</h1>
+      <p class="mt-1 text-sm text-slate-600">{{ date_display }}</p>
+    </div>
+    {% if deleted %}
+      <span class="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">Dihapus</span>
+    {% elif correction %}
+      <span class="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900 ring-1 ring-inset ring-sky-600/30">Koreksi saldo awal</span>
+    {% else %}
+      <span class="badge">Aktif</span>
+    {% endif %}
+  </header>
+
+  {% if deleted %}
+    <div role="status" class="mb-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700 ring-1 ring-inset ring-slate-300">
+      Transaksi ini sudah dihapus pada {{ deleted_at_display }}.
+    </div>
+  {% endif %}
+
+  {% if correction %}
+    <div role="status" class="mb-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-inset ring-sky-600/20">
+      Transaksi koreksi saldo awal bersifat read-only. Koreksi balik lewat menu Saldo Awal.
+    </div>
+  {% endif %}
+
+  {% if locked and not deleted %}
+    <div role="status" class="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/30">
+      Periode transaksi terkunci.
+    </div>
+  {% endif %}
+
+  <div class="space-y-4">
+    <section class="card">
+      <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="text-slate-500">Arus</dt>
+          <dd class="mt-1 font-medium text-slate-900">{{ flow_display }}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Kategori</dt>
+          <dd class="mt-1 text-slate-900">{{ txn.category.name }}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Item</dt>
+          <dd class="mt-1 text-slate-900">{{ txn.item.name }}</dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Nominal</dt>
+          <dd class="mt-1 text-lg font-semibold tabular-nums text-slate-900 {% if deleted %}line-through{% endif %}">
+            Rp {{ amount_display }}
+          </dd>
+        </div>
+        {% if qty_display %}
+          <div>
+            <dt class="text-slate-500">Qty</dt>
+            <dd class="mt-1 tabular-nums text-slate-900">{{ qty_display }} {{ txn.unit }}</dd>
+          </div>
+        {% endif %}
+        <div>
+          <dt class="text-slate-500">Metode bayar</dt>
+          <dd class="mt-1 text-slate-900">{{ payment_display }}</dd>
+        </div>
+        {% if period_display %}
+          <div>
+            <dt class="text-slate-500">Bulan gaji</dt>
+            <dd class="mt-1 text-slate-900">{{ period_display }}</dd>
+          </div>
+        {% endif %}
+        <div class="sm:col-span-2">
+          <dt class="text-slate-500">Keterangan</dt>
+          <dd class="mt-1 whitespace-pre-line text-slate-900">{{ txn.notes|default:"—" }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2 class="text-sm font-semibold text-slate-900">Jejak transaksi</h2>
+      <dl class="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt class="text-slate-500">Dibuat</dt>
+          <dd class="mt-1 text-slate-900">
+            {{ created_at_display }}
+            {% if txn.created_by %}· {{ txn.created_by.get_full_name|default:txn.created_by.username }}{% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt class="text-slate-500">Terakhir diubah</dt>
+          <dd class="mt-1 text-slate-900">
+            {{ updated_at_display }}
+            {% if txn.updated_by %}· {{ txn.updated_by.get_full_name|default:txn.updated_by.username }}{% endif %}
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <div class="flex flex-col gap-2 sm:flex-row">
+      {% if can_edit %}
+        <a href="{% url 'transaction_update' txn.pk %}" class="btn w-full sm:w-auto">Edit</a>
+      {% endif %}
+      {% if can_delete %}
+        {% if locked %}
+          <button type="button" class="btn btn-secondary w-full sm:w-auto" disabled>Hapus</button>
+          <p class="self-center text-sm text-amber-800">Periode terkunci.</p>
+        {% else %}
+          <a href="{% url 'transaction_delete' txn.pk %}" class="btn btn-secondary w-full text-red-700 sm:w-auto">Hapus</a>
+        {% endif %}
+      {% endif %}
+      {% if not correction %}
+        <button type="button" class="btn btn-secondary w-full sm:w-auto" disabled title="Tersedia pada pembaruan daftar transaksi">Duplikat</button>
+      {% endif %}
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary w-full sm:w-auto">Kembali</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

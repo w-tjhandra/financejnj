@@ -1,0 +1,82 @@
+{% comment %}Partial field dependen item (HTMX): kategori, qty/satuan, metode bayar, bulan gaji.{% endcomment %}
+<div>
+  <label for="{{ form.category.id_for_label }}" class="label">Kategori</label>
+  {{ form.category }}
+  {% if form.category.errors %}
+    <p role="alert" class="mt-1 text-sm text-red-700">{{ form.category.errors|join:" " }}</p>
+  {% else %}
+    <p class="mt-1 text-xs text-slate-500">Default mengikuti item, masih bisa diubah.</p>
+  {% endif %}
+</div>
+
+<div>
+  <label for="{{ form.qty.id_for_label }}" class="label">
+    Qty
+    {% if selected_item.stock_item_id %}
+      <span class="font-normal text-slate-400">(wajib, {{ selected_item.stock_item.unit }})</span>
+    {% else %}
+      <span class="font-normal text-slate-400">(opsional)</span>
+    {% endif %}
+  </label>
+  <input type="text" name="qty" id="{{ form.qty.id_for_label }}" class="input"
+         inputmode="decimal" autocomplete="off" placeholder="mis. 20"
+         value="{{ form.qty.value|default_if_none:'' }}"
+         {% if selected_item.stock_item_id %}required{% endif %}
+         {% if read_only %}disabled{% endif %}>
+  {% if form.qty.errors %}
+    <p role="alert" class="mt-1 text-sm text-red-700">{{ form.qty.errors|join:" " }}</p>
+  {% elif selected_item.stock_item_id %}
+    <p class="mt-1 text-xs text-slate-500">Stok berubah mengikuti arah arus transaksi.</p>
+  {% elif selected_item %}
+    <p class="mt-1 text-xs text-slate-500">Qty tidak mengubah stok.</p>
+  {% else %}
+    <p class="mt-1 text-xs text-slate-500">Wajib untuk item ber-stok, opsional untuk item non-stok.</p>
+  {% endif %}
+</div>
+
+<div>
+  <label for="{{ form.unit.id_for_label }}" class="label">
+    Satuan
+    {% if selected_item.stock_item_id %}
+      <span class="font-normal text-slate-400">(mengikuti stok)</span>
+    {% else %}
+      <span class="font-normal text-slate-400">(opsional)</span>
+    {% endif %}
+  </label>
+  <input type="text" name="unit" id="{{ form.unit.id_for_label }}" class="input"
+         maxlength="10" autocomplete="off" placeholder="mis. kg, ekor"
+         value="{% if selected_item.stock_item_id %}{{ selected_item.stock_item.unit }}{% else %}{{ form.unit.value|default_if_none:'' }}{% endif %}"
+         {% if selected_item.stock_item_id %}readonly{% endif %}
+         {% if read_only %}disabled{% endif %}>
+  {% if form.unit.errors %}
+    <p role="alert" class="mt-1 text-sm text-red-700">{{ form.unit.errors|join:" " }}</p>
+  {% elif selected_item.stock_item_id %}
+    <p class="mt-1 text-xs text-slate-500">Satuan mengikuti jenis stok.</p>
+  {% else %}
+    <p class="mt-1 text-xs text-slate-500">Satuan bebas, mis. kg, ekor, atau karung.</p>
+  {% endif %}
+</div>
+
+<div>
+  <label for="{{ form.payment_method.id_for_label }}" class="label">Metode bayar</label>
+  {{ form.payment_method }}
+  {% if form.payment_method.errors %}
+    <p role="alert" class="mt-1 text-sm text-red-700">{{ form.payment_method.errors|join:" " }}</p>
+  {% else %}
+    <p class="mt-1 text-xs text-slate-500">Terisi otomatis dari item, bisa diubah.</p>
+  {% endif %}
+</div>
+
+<div>
+  <label for="{{ form.period_month.id_for_label }}" class="label">
+    Bulan gaji <span class="font-normal text-slate-400">(khusus item bulanan)</span>
+  </label>
+  <input type="month" name="period_month" id="{{ form.period_month.id_for_label }}" class="input"
+         value="{{ form.period_month.value|default_if_none:'' }}"
+         max="{{ month_max }}" {% if read_only %}disabled{% endif %}>
+  {% if form.period_month.errors %}
+    <p role="alert" class="mt-1 text-sm text-red-700">{{ form.period_month.errors|join:" " }}</p>
+  {% else %}
+    <p class="mt-1 text-xs text-slate-500">Wajib untuk item bulanan; tidak boleh setelah bulan tanggal transaksi.</p>
+  {% endif %}
+</div>

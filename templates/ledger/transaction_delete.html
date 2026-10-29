@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Hapus transaksi · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <p class="text-xs font-semibold uppercase tracking-wide text-red-700">Transaksi</p>
+    <h1 class="mt-1 text-2xl font-semibold text-slate-900">Hapus transaksi?</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Transaksi dihapus lunak: hilang dari rekap dan daftar default, tetapi barisnya tetap tersimpan untuk audit.
+    </p>
+  </header>
+
+  {% if error %}
+    <div role="alert" class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-red-600/20">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+      <div>
+        <dt class="text-slate-500">Tanggal</dt>
+        <dd class="mt-1 text-slate-900">{{ date_display }}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-500">Arus</dt>
+        <dd class="mt-1 text-slate-900">{{ flow_display }}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-500">Kategori</dt>
+        <dd class="mt-1 text-slate-900">{{ txn.category.name }}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-500">Item</dt>
+        <dd class="mt-1 text-slate-900">{{ txn.item.name }}</dd>
+      </div>
+      <div>
+        <dt class="text-slate-500">Nominal</dt>
+        <dd class="mt-1 font-semibold tabular-nums text-slate-900">Rp {{ amount_display }}</dd>
+      </div>
+      {% if qty_display %}
+        <div>
+          <dt class="text-slate-500">Qty</dt>
+          <dd class="mt-1 tabular-nums text-slate-900">{{ qty_display }} {{ txn.unit }}</dd>
+        </div>
+      {% endif %}
+      {% if period_display %}
+        <div>
+          <dt class="text-slate-500">Bulan gaji</dt>
+          <dd class="mt-1 text-slate-900">{{ period_display }}</dd>
+        </div>
+      {% endif %}
+    </dl>
+
+    {% if locked %}
+      <div role="status" class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-inset ring-amber-600/20">
+        Periode terkunci. Buka kunci terlebih dahulu.
+      </div>
+    {% elif correction %}
+      <div role="status" class="mt-4 rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-900 ring-1 ring-inset ring-sky-600/20">
+        Transaksi koreksi saldo awal tidak bisa dihapus.
+      </div>
+    {% endif %}
+
+    <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+      {% if not locked and not correction %}
+        <form method="post" action="{% url 'transaction_delete' txn.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn w-full bg-red-700 hover:bg-red-800 sm:w-auto">Hapus transaksi</button>
+        </form>
+      {% else %}
+        <button type="button" class="btn btn-secondary w-full sm:w-auto" disabled>Hapus transaksi</button>
+      {% endif %}
+      <a href="{% url 'transaction_detail' txn.pk %}" class="btn btn-secondary w-full sm:w-auto">Batal</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
