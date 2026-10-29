@@ -1,8 +1,4 @@
-"""Layar Pengaturan → Saldo Awal (S-17, FR-07).
-
-Koreksi saldo awal belum dibangun (T-006.4); tombolnya diarahkan ke halaman
-placeholder yang menjelaskan ketersediaannya.
-"""
+"""Layar Pengaturan → Saldo Awal (S-17, FR-07) & Transaksi (S-04…S-07, FR-08…FR-12)."""
 
 from __future__ import annotations
 
@@ -18,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
 
 from core import messages
-from core.errors import DomainError, DuplicateSalary, StockConflict, StockInsufficient
+from core.errors import DomainError, DuplicateSalary, NotFound, StockConflict, StockInsufficient
 from core.models import CompanyProfile
 from core.services.locks import is_date_editable, max_locked_period
 from core.types import RequestMeta
@@ -31,15 +27,26 @@ from core.utils.dates import (
     today_wib,
 )
 from core.utils.numbers import format_id_number, format_money, format_qty
-from ledger.forms import OpeningBalanceForm, TransactionForm, transaction_initial
+from ledger.forms import (
+    OpeningBalanceForm,
+    OpeningCorrectionForm,
+    TransactionForm,
+    transaction_initial,
+)
 from ledger.models import Transaction
 from ledger.services.opening import (
     cash_is_locked,
     cash_locked_since,
     current_account,
+    record_opening_correction,
     set_opening_balance,
 )
-from ledger.services.transactions import create_transaction, delete_transaction, update_transaction
+from ledger.services.transactions import (
+    create_transaction,
+    delete_transaction,
+    duplicate_prefill,
+    update_transaction,
+)
 from master.models import Item
 from master.services.items import active_items
 
@@ -111,17 +118,6 @@ def opening_balance(request: HttpRequest) -> HttpResponse:
     )
 
 
-@login_required
-@require_GET
-def opening_correction(request: HttpRequest) -> HttpResponse:
-    """Placeholder sampai modul transaksi (T-006.4) menyediakan koreksi."""
-    return render(
-        request,
-        "ledger/opening_correction_placeholder.html",
-        {"account": current_account()},
-    )
-
-
 # --- Transaksi: form, detail, hapus (FR-08…FR-11) -------------------------
 
 
@@ -169,8 +165,45 @@ def _transaction_payload(form: TransactionForm) -> dict:
 
 
 def _form_initial_with_item(request: HttpRequest) -> dict:
-    """Initial form baru; mendukung pemilihan item lewat query (tautan cepat)."""
+    """Initial form baru; mendukung pemilihan item lewat query (tautan cepat) & prefill duplikat."""
     initial = {"date": today_wib().isoformat(), "flow": "expense"}
+
+    # Handle prefill dari duplikat transaksi
+    prefill_keys = [
+        "date",
+        "flow",
+        "category",
+        "item",
+        "amount",
+        "qty",
+        "unit",
+        "payment_method",
+        "notes",
+        "period_month",
+    ]
+    has_prefill = any(request.GET.get(k) for k in prefill_keys)
+    if has_prefill:
+        initial["date"] = request.GET.get("date", today_wib().isoformat())
+        initial["flow"] = request.GET.get("flow", "expense")
+        if request.GET.get("category"):
+            initial["category"] = int(request.GET["category"])
+        if request.GET.get("item"):
+            initial["item"] = int(request.GET["item"])
+        if request.GET.get("amount"):
+            initial["amount"] = request.GET["amount"]
+        if request.GET.get("qty"):
+            initial["qty"] = request.GET["qty"]
+        if request.GET.get("unit"):
+            initial["unit"] = request.GET["unit"]
+        if request.GET.get("payment_method"):
+            initial["payment_method"] = request.GET["payment_method"]
+        if request.GET.get("notes"):
+            initial["notes"] = request.GET["notes"]
+        if request.GET.get("period_month"):
+            initial["period_month"] = request.GET["period_month"]
+        return initial
+
+    # Fallback: item selection via query param
     item_id = request.GET.get("item")
     if item_id:
         item = (
@@ -540,3 +573,108 @@ def transaction_list(request: HttpRequest) -> HttpResponse:
         "amount_max_display": format_money(amount_max) if amount_max is not None else "",
     }
     return render(request, "ledger/transaction_list.html", context)
+
+
+# --- Duplikat transaksi (FR-12, BR-08) ----------------------------------------
+
+
+@login_required
+@require_GET
+def transaction_duplicate(request: HttpRequest, pk: int) -> HttpResponse:
+    """GET /transaksi/<pk>/duplikat → redirect ke form create dengan prefill.
+
+    Tidak menulis DB. Menggunakan service duplicate_prefill().
+    """
+    txn = Transaction.objects.filter(pk=pk).first()
+    if txn is None:
+        raise Http404(messages.TRANSACTION_NOT_FOUND)
+    if txn.deleted_at is not None or txn.is_opening_correction:
+        flash.error(request, "Transaksi ini tidak bisa diduplikat.")
+        return redirect("transaction_detail", pk=pk)
+
+    try:
+        prefill = duplicate_prefill(pk)
+    except NotFound:
+        raise Http404(messages.TRANSACTION_NOT_FOUND) from None
+    except DomainError as exc:
+        flash.error(request, exc.message)
+        return redirect("transaction_detail", pk=pk)
+
+    # Redirect ke form create dengan parameter prefill
+    params = []
+    for key, value in prefill.items():
+        if value is None:
+            continue
+        if key in ("category", "item") and hasattr(value, "pk"):
+            params.append(f"{key}={value.pk}")
+        elif key == "period_month" and value:
+            params.append(f"{key}={value.strftime('%Y-%m')}")
+        elif key == "date":
+            params.append(f"{key}={value.isoformat()}")
+        else:
+            params.append(f"{key}={value}")
+    return redirect(f"{reverse('transaction_create')}?{'&'.join(params)}")
+
+
+# --- Koreksi Saldo Awal UI (S-17, FR-07) --------------------------------------
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def opening_correction(request: HttpRequest) -> HttpResponse:
+    """Halaman koreksi saldo awal.
+
+    GET: tampil form (tanggal read-only = opening_balance_date)
+    POST: validasi, panggil record_opening_correction(), redirect ke opening_balance + pesan sukses
+    """
+    account = current_account()
+    if account is None:
+        raise Http404("Akun kas belum tersedia.")
+
+    if not cash_is_locked():
+        flash.error(request, "Saldo awal belum terkunci; ubah saldo awal secara langsung.")
+        return redirect("opening_balance")
+
+    # Cek apakah periode saldo awal terkunci
+    from core.services.locks import is_date_editable
+
+    if not is_date_editable(account.opening_balance_date):
+        flash.error(request, messages.period_locked(account.opening_balance_date))
+        return redirect("opening_balance")
+
+    form = OpeningCorrectionForm(
+        request.POST or None,
+        opening_balance_date=account.opening_balance_date,
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            delta = form.cleaned_data["amount"]
+            # Flow menentukan tanda delta: income = positif, expense = negatif
+            if form.cleaned_data["flow"] == "expense":
+                delta = -delta
+            record_opening_correction(
+                delta=delta,
+                reason=form.cleaned_data["reason"],
+                actor=request.user,
+                meta=_meta(request),
+            )
+        except DomainError as exc:
+            if exc.fields:
+                for field, message in exc.fields.items():
+                    form.add_error(field if field in form.fields else None, message)
+            else:
+                form.add_error(None, exc.message)
+        else:
+            flash.success(request, "Koreksi saldo awal tercatat. Saldo kas & mutasi diperbarui.")
+            return redirect("opening_balance")
+
+    return render(
+        request,
+        "ledger/opening_correction.html",
+        {
+            "form": form,
+            "account": account,
+            "opening_balance_display": format_money(account.opening_balance),
+            "opening_date_display": format_date_long_id(account.opening_balance_date),
+        },
+    )

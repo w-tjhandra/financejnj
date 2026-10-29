@@ -113,8 +113,8 @@
           <a href="{% url 'transaction_delete' txn.pk %}" class="btn btn-secondary w-full text-red-700 sm:w-auto">Hapus</a>
         {% endif %}
       {% endif %}
-      {% if not correction %}
-        <button type="button" class="btn btn-secondary w-full sm:w-auto" disabled title="Tersedia pada pembaruan daftar transaksi">Duplikat</button>
+      {% if not correction and not deleted %}
+        <a href="{% url 'transaction_duplicate' txn.pk %}" class="btn btn-secondary w-full sm:w-auto">Duplikat</a>
       {% endif %}
       <a href="{% url 'dashboard' %}" class="btn btn-secondary w-full sm:w-auto">Kembali</a>
     </div>

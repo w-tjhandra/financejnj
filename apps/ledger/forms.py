@@ -1,4 +1,4 @@
-"""Form saldo awal S-17 dan form transaksi S-05."""
+"""Form saldo awal S-17, koreksi saldo awal, dan form transaksi S-05."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from core import messages
 from core.errors import DomainError
 from core.utils.dates import month_start, today_wib
 from core.utils.numbers import format_id_number, format_money, parse_id_number
-from ledger.services.opening import MONEY_MAX
+from ledger.services.opening import MONEY_MAX, REASON_MAX, REASON_MIN
 from ledger.services.transactions import QTY_MAX
 from master.models import FLOW_CHOICES, PAYMENT_METHOD_CHOICES, Category, Item
 from master.services.items import active_items
@@ -21,6 +21,7 @@ from master.services.items import active_items
 DATE_INPUT_FORMATS = ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y")
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 PAYMENT_METHOD_FORM_CHOICES = [("", "— Pilih —"), *PAYMENT_METHOD_CHOICES]
+FLOW_CHOICES_FORM = [("income", "Pemasukan"), ("expense", "Pengeluaran")]
 
 
 class OpeningBalanceForm(forms.Form):
@@ -364,3 +365,85 @@ def transaction_initial(txn) -> dict:
         "notes": txn.notes,
         "period_month": txn.period_month.strftime("%Y-%m") if txn.period_month else "",
     }
+
+
+class OpeningCorrectionForm(forms.Form):
+    """Form koreksi saldo awal (S-17).
+
+    - Tanggal: read-only, mengikuti opening_balance_date
+    - Arus: Pemasukan/Pengeluaran
+    - Nominal: 0.01 – 1e11
+    - Keterangan: wajib ≥10 karakter
+    - Item & kategori: sistem (hidden, tidak ditampilkan)
+    """
+
+    date = forms.DateField(
+        label="Tanggal",
+        widget=forms.DateInput(attrs={"class": "input", "type": "date", "readonly": True}),
+    )
+    flow = forms.ChoiceField(
+        choices=FLOW_CHOICES_FORM,
+        label="Arus",
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    amount = forms.CharField(
+        label="Nominal (Rp)",
+        widget=forms.TextInput(
+            attrs={
+                "class": "input",
+                "inputmode": "decimal",
+                "autocomplete": "off",
+                "placeholder": "mis. 1.000.000",
+            }
+        ),
+        error_messages={"required": messages.NUMBER_INVALID.format(field="Nominal")},
+    )
+    reason = forms.CharField(
+        label="Keterangan",
+        min_length=REASON_MIN,
+        max_length=REASON_MAX,
+        widget=forms.Textarea(
+            attrs={
+                "class": "input min-h-[5rem]",
+                "rows": 3,
+                "placeholder": f"Minimal {REASON_MIN} karakter, maksimum {REASON_MAX}.",
+            }
+        ),
+        error_messages={
+            "required": messages.REASON_MIN_10,
+            "min_length": messages.REASON_MIN_10,
+            "max_length": f"Keterangan maksimum {REASON_MAX} karakter.",
+        },
+    )
+
+    def __init__(self, *args, opening_balance_date: date | None = None, **kwargs) -> None:
+        self.opening_balance_date = opening_balance_date
+        initial = dict(kwargs.pop("initial", None) or {})
+        if opening_balance_date is not None:
+            initial.setdefault("date", opening_balance_date.isoformat())
+        super().__init__(*args, initial=initial, **kwargs)
+        if opening_balance_date is not None:
+            self.fields["date"].initial = opening_balance_date.isoformat()
+            self.fields["date"].widget.attrs["value"] = opening_balance_date.isoformat()
+
+    def clean_amount(self) -> Decimal:
+        try:
+            return parse_id_number(
+                self.cleaned_data["amount"],
+                places=2,
+                field="Nominal",
+                min_value=Decimal("0.01"),
+                max_value=MONEY_MAX,
+            )
+        except DomainError as exc:
+            raise ValidationError(exc.message) from exc
+
+    def clean_date(self) -> date:
+        """Tanggal harus sama dengan opening_balance_date (server-side validation)."""
+        value = self.cleaned_data.get("date")
+        if self.opening_balance_date is not None and value != self.opening_balance_date:
+            raise ValidationError("Tanggal koreksi harus sama dengan tanggal saldo awal.")
+        return value
+
+    def clean_reason(self) -> str:
+        return (self.cleaned_data.get("reason") or "").strip()

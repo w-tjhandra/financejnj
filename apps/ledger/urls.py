@@ -1,4 +1,4 @@
-"""URL transaksi ledger: daftar (S-04), form (S-05), detail (S-06), hapus (S-07)."""
+"""URL transaksi ledger: daftar (S-04), form (S-05), detail (S-06), hapus (S-07), duplikat."""
 
 from django.urls import path
 
@@ -12,4 +12,5 @@ urlpatterns = [
     path("<int:pk>", views.transaction_detail, name="transaction_detail"),
     path("<int:pk>/ubah", views.transaction_update, name="transaction_update"),
     path("<int:pk>/hapus", views.transaction_delete, name="transaction_delete"),
+    path("<int:pk>/duplikat", views.transaction_duplicate, name="transaction_duplicate"),
 ]

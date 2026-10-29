@@ -85,7 +85,10 @@ def test_ac_07_2_setelah_transaksi_readonly_dan_ada_tombol_koreksi(auth_client, 
 
     placeholder = auth_client.get(reverse("opening_correction"))
     assert placeholder.status_code == 200
-    assert "tersedia setelah modul transaksi" in placeholder.content.decode()
+    body = placeholder.content.decode()
+    assert "Koreksi Saldo Awal" in body
+    assert 'name="amount"' in body
+    assert 'name="reason"' in body
 
 
 @pytest.mark.django_db
