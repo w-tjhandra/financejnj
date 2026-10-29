@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Profil usaha · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-slate-900">Profil usaha</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Nama usaha dipakai di header aplikasi dan laporan. Logo tersedia pada fase berikutnya.
+    </p>
+  </header>
+
+  <div class="card">
+    {% if form.non_field_errors %}
+      <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+        {{ form.non_field_errors|join:" " }}
+      </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'profile' %}" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label for="{{ form.name.id_for_label }}" class="label">Nama usaha <span class="text-red-700" aria-hidden="true">*</span></label>
+        {{ form.name }}
+        {% if form.name.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.name.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        <label for="{{ form.address.id_for_label }}" class="label">Alamat</label>
+        {{ form.address }}
+        {% if form.address.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.address.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="{{ form.phone.id_for_label }}" class="label">Telepon</label>
+          {{ form.phone }}
+          {% if form.phone.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.phone.errors|join:" " }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="{{ form.email.id_for_label }}" class="label">Email</label>
+          {{ form.email }}
+          {% if form.email.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.email.errors|join:" " }}</p>
+          {% else %}
+            <p class="mt-1 text-xs text-slate-500">Opsional. Format email harus valid.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn w-full sm:w-auto">Simpan profil</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

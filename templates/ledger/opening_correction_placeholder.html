@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Koreksi saldo awal · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-slate-900">Koreksi Saldo Awal</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Koreksi saldo awal tersedia setelah modul transaksi aktif.
+    </p>
+  </header>
+
+  <div class="card">
+    <div role="status" class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 ring-1 ring-inset ring-slate-300">
+      Fitur koreksi saldo awal (transaksi non-operasional) akan tersedia setelah modul transaksi selesai dibangun.
+      Sampai saat itu, nilai saldo awal tidak berubah.
+    </div>
+    <a href="{% url 'opening_balance' %}" class="btn btn-secondary mt-6 w-full sm:w-auto">Kembali ke Saldo Awal</a>
+  </div>
+</div>
+{% endblock %}

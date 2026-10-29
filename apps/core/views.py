@@ -15,12 +15,16 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from core import messages as core_messages
-from core.forms import AccountPasswordChangeForm, LoginForm
+from core.errors import DomainError
+from core.forms import AccountPasswordChangeForm, CompanyProfileForm, LoginForm
+from core.models import CompanyProfile
 from core.services.login_throttle import (
     is_login_locked,
     register_login_failure,
     reset_login_failures,
 )
+from core.services.profile import update_company_profile
+from core.types import RequestMeta
 
 
 @login_not_required
@@ -112,6 +116,46 @@ def account_settings(request: HttpRequest) -> HttpResponse:
         return redirect("account_settings")
 
     return render(request, "core/account_settings.html", {"form": form})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def profile_view(request: HttpRequest) -> HttpResponse:
+    """S-20 Profil usaha. Header aplikasi memakai `company_name` terbaru."""
+    profile = CompanyProfile.get_solo()
+    form = CompanyProfileForm(
+        request.POST or None,
+        initial={
+            "name": profile.name if profile else "",
+            "address": profile.address if profile else "",
+            "phone": profile.phone if profile else "",
+            "email": profile.email if profile else "",
+        },
+    )
+    if request.method == "POST" and form.is_valid():
+        try:
+            update_company_profile(
+                name=form.cleaned_data["name"],
+                address=form.cleaned_data["address"],
+                phone=form.cleaned_data["phone"],
+                email=form.cleaned_data["email"],
+                actor=request.user,
+                meta=RequestMeta(
+                    ip=request.META.get("REMOTE_ADDR"),
+                    user_agent=request.headers.get("User-Agent"),
+                ),
+            )
+        except DomainError as exc:
+            if exc.fields:
+                for field, message in exc.fields.items():
+                    form.add_error(field if field in form.fields else None, message)
+            else:
+                form.add_error(None, exc.message)
+        else:
+            messages.success(request, core_messages.PROFILE_SAVED)
+            return redirect("profile")
+
+    return render(request, "core/profile.html", {"form": form})
 
 
 def error_403(request: HttpRequest, exception: Exception) -> HttpResponse:

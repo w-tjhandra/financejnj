@@ -3,6 +3,7 @@
 from django.urls import include, path
 
 from core import views as core_views
+from ledger import views as ledger_views
 from onboarding import views as onboarding_views
 from reports import views as reports_views
 
@@ -11,7 +12,19 @@ urlpatterns = [
     path("masuk", core_views.LoginView.as_view(), name="login"),
     path("keluar", core_views.logout_view, name="logout"),
     path("pengaturan/akun", core_views.account_settings, name="account_settings"),
+    path("pengaturan/profil", core_views.profile_view, name="profile"),
+    path(
+        "pengaturan/saldo-awal",
+        ledger_views.opening_balance,
+        name="opening_balance",
+    ),
+    path(
+        "pengaturan/saldo-awal/koreksi",
+        ledger_views.opening_correction,
+        name="opening_correction",
+    ),
     path("pengaturan/", include("master.urls")),
+    path("pengaturan/", include("stock.urls")),
     path("setup", onboarding_views.setup_entry, name="setup"),
     path("setup/akun", onboarding_views.step_account, name="setup_account"),
     path("setup/profil", onboarding_views.step_profile, name="setup_profile"),

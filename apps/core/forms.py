@@ -2,10 +2,56 @@
 
 from __future__ import annotations
 
+from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.core.exceptions import ValidationError
 
 from core import messages as core_messages
+
+
+class CompanyProfileForm(forms.Form):
+    """Identitas usaha (S-20). Logo fase 2, jadi belum ditampilkan."""
+
+    name = forms.CharField(
+        max_length=100,
+        label="Nama usaha",
+        error_messages={"required": core_messages.BUSINESS_NAME_REQUIRED},
+        widget=forms.TextInput(attrs={"class": "input", "autofocus": True}),
+    )
+    address = forms.CharField(
+        max_length=300,
+        required=False,
+        label="Alamat",
+        widget=forms.TextInput(attrs={"class": "input", "autocomplete": "street-address"}),
+    )
+    phone = forms.CharField(
+        max_length=30,
+        required=False,
+        label="Telepon",
+        widget=forms.TextInput(attrs={"class": "input", "autocomplete": "tel"}),
+    )
+    email = forms.EmailField(
+        max_length=254,
+        required=False,
+        label="Email",
+        error_messages={"invalid": core_messages.EMAIL_INVALID},
+        widget=forms.EmailInput(attrs={"class": "input", "autocomplete": "email"}),
+    )
+
+    def clean_name(self) -> str:
+        name = (self.cleaned_data.get("name") or "").strip()
+        if not name:
+            raise ValidationError(core_messages.BUSINESS_NAME_REQUIRED)
+        return name
+
+    def clean_address(self) -> str:
+        return (self.cleaned_data.get("address") or "").strip()
+
+    def clean_phone(self) -> str:
+        return (self.cleaned_data.get("phone") or "").strip()
+
+    def clean_email(self) -> str:
+        return (self.cleaned_data.get("email") or "").strip()
 
 
 class LoginForm(AuthenticationForm):

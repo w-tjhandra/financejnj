@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from core.utils.dates import format_date_short, format_month_id
+from core.utils.dates import format_date_id, format_date_short, format_month_id
 
 # --- Auth & setup ---------------------------------------------------------
 RATE_LIMITED = "Terlalu banyak percobaan. Coba lagi dalam 15 menit."
@@ -19,6 +19,11 @@ PASSWORD_SAME_AS_USERNAME = "Kata sandi tidak boleh sama dengan nama pengguna."
 PASSWORD_MISMATCH = "Konfirmasi kata sandi tidak sama."
 OLD_PASSWORD_INCORRECT = "Kata sandi lama salah."
 PASSWORD_CHANGED = "Kata sandi berhasil diperbarui."
+
+# --- Profil usaha ---------------------------------------------------------
+BUSINESS_NAME_REQUIRED = "Nama usaha wajib diisi"
+EMAIL_INVALID = "Format email tidak valid."
+PROFILE_SAVED = "Profil usaha disimpan."
 
 # --- Master data ----------------------------------------------------------
 CATEGORY_SYSTEM = "Kategori sistem tidak bisa dihapus."
@@ -42,11 +47,15 @@ ITEM_FREQUENCY_INVALID = "Frekuensi item tidak valid."
 ITEM_CATEGORY_INACTIVE = "Kategori default tidak aktif."
 STOCK_UNIT_FIXED = "Satuan stok tidak bisa diubah."
 STOCK_NOT_FOUND = "Jenis stok tidak ditemukan."
-STOCK_OPENING_LOCKED = "Terkunci sejak {date} (ada mutasi stok). Gunakan penyesuaian untuk koreksi."
+STOCK_OPENING_LOCKED = "Terkunci sejak {date}. Gunakan penyesuaian."
+STOCK_SETTINGS_SAVED = "Pengaturan stok disimpan."
 
 # --- Saldo awal & tanggal -------------------------------------------------
 DATE_AFTER_TODAY = "Tanggal saldo awal tidak boleh melebihi hari ini."
 DATE_BEFORE_BUSINESS_START = "Tanggal saldo awal tidak boleh sebelum tanggal mulai usaha ({date})"
+DATE_INVALID = "Format tanggal tidak valid."
+OPENING_BALANCE_LOCKED = "Saldo awal terkunci karena sudah ada transaksi."
+OPENING_BALANCE_SAVED = "Saldo awal disimpan."
 DATE_BEFORE_OPENING = "Tanggal transaksi tidak boleh sebelum tanggal saldo awal ({date})."
 TXN_DATE_AFTER_TODAY = "Tanggal tidak boleh melebihi hari ini."
 
@@ -128,3 +137,7 @@ def date_before_business_start(value: date) -> str:
 
 def date_before_opening(value: date) -> str:
     return DATE_BEFORE_OPENING.format(date=format_date_short(value))
+
+
+def stock_opening_locked(value: date) -> str:
+    return STOCK_OPENING_LOCKED.format(date=format_date_id(value))
