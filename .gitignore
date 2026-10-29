@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Django
+.env
+*.sqlite3
+/staticfiles/
+/media/
+*.log
+
+# Alat
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Tailwind standalone binary (diunduh saat build image; tidak di-commit)
+/bin/tailwindcss
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/

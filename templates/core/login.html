@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Masuk · Telur Finance{% endblock %}
+
+{% block content %}
+<div class="flex min-h-screen items-center justify-center px-4 py-10">
+  <div class="w-full max-w-sm">
+    <div class="mb-6 text-center">
+      <span aria-hidden="true" class="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-emerald-700 text-lg font-bold text-white">TF</span>
+      <h1 class="mt-4 text-2xl font-semibold text-slate-900">Masuk</h1>
+      <p class="mt-1 text-sm text-slate-600">Kelola keuangan &amp; stok peternakan telur.</p>
+    </div>
+
+    <div class="card">
+      {% if form.non_field_errors %}
+        <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+          {{ form.non_field_errors|join:" " }}
+        </div>
+      {% endif %}
+
+      {% if request.GET.expired %}
+        <p class="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-600/20" role="alert">
+          Sesi berakhir, silakan masuk kembali.
+        </p>
+      {% endif %}
+
+      <form method="post" action="{% url 'login' %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="mb-4">
+          <label for="{{ form.username.id_for_label }}" class="label">Nama pengguna</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <p id="id_username_help" role="alert" class="mt-1 text-sm text-red-700">{{ form.username.errors|join:" " }}</p>
+          {% else %}
+            <p id="id_username_help" class="mt-1 text-xs text-slate-500">Gunakan nama pengguna yang dibuat saat setup.</p>
+          {% endif %}
+        </div>
+
+        <div class="mb-6">
+          <label for="{{ form.password.id_for_label }}" class="label">Kata sandi</label>
+          {{ form.password }}
+          {% if form.password.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ form.password.errors|join:" " }}</p>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn w-full">Masuk</button>
+      </form>
+    </div>
+
+    <p class="mt-6 text-center text-xs text-slate-500">
+      Lupa kata sandi? Jalankan <code class="rounded bg-slate-100 px-1 py-0.5">python manage.py changepassword &lt;username&gt;</code> di server.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+[project]
+name = "telur-finance"
+version = "0.1.0"
+description = "Pencatatan keuangan & stok peternakan telur"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.2,<5.3",
+    "psycopg[binary]>=3.2,<4",
+    "weasyprint>=62,<66",
+    "openpyxl>=3.1,<4",
+    "gunicorn>=23,<24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "pytest-django>=4.9,<5",
+    "ruff>=0.6,<1",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+# Kode aplikasi dijalankan dari /app (bukan di-install sebagai paket);
+# instalasi hanya memasang dependensi.
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["static", "media", "staticfiles"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

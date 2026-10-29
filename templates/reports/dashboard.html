@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · Telur Finance{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-slate-900">Dashboard</h1>
+    <p class="mt-1 text-sm text-slate-600">Ringkasan keuangan dan stok peternakan.</p>
+  </header>
+
+  <section aria-labelledby="kpi-heading" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <h2 id="kpi-heading" class="sr-only">Ringkasan utama</h2>
+
+    <div class="card">
+      <p class="text-sm font-medium text-slate-500">Saldo kas</p>
+      <p class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</p>
+      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+    </div>
+
+    <div class="card">
+      <p class="text-sm font-medium text-slate-500">Pemasukan bulan ini</p>
+      <p class="mt-2 text-2xl font-semibold tabular-nums text-emerald-700">—</p>
+      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+    </div>
+
+    <div class="card">
+      <p class="text-sm font-medium text-slate-500">Pengeluaran bulan ini</p>
+      <p class="mt-2 text-2xl font-semibold tabular-nums text-red-700">—</p>
+      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+    </div>
+
+    <div class="card">
+      <p class="text-sm font-medium text-slate-500">Stok telur</p>
+      <p class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</p>
+      <p class="mt-1 text-xs text-slate-500">Menunggu data stok</p>
+    </div>
+  </section>
+
+  <section class="mt-6">
+    <div class="card flex flex-col items-start gap-2">
+      <span class="badge">Fondasi</span>
+      <h2 class="text-lg font-semibold text-slate-900">Aplikasi siap dikembangkan</h2>
+      <p class="text-sm text-slate-600">
+        Autentikasi, layout responsif, dan pipeline aset sudah berjalan. Modul transaksi,
+        stok, dan rekap akan diisi pada tahap berikutnya.
+      </p>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% load static %}<!doctype html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}Telur Finance{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
+  <script src="{% static 'vendor/alpine-3.14.9.min.js' %}" defer></script>
+  <script src="{% static 'vendor/chart-4.4.7.umd.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <a href="#main" class="sr-only rounded-lg bg-white px-4 py-2 text-sm font-semibold text-emerald-800 ring-1 ring-slate-300 focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50">Lewati ke konten</a>
+
+  {% if user.is_authenticated %}
+    {% include "partials/nav.html" %}
+  {% endif %}
+
+  <main id="main" class="{% if user.is_authenticated %}lg:pl-60{% endif %}">
+    {% if messages %}
+      <div class="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6" role="status" aria-live="polite">
+        {% for message in messages %}
+          <div class="mb-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-900 ring-1 ring-emerald-600/20">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <div x-data class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4" aria-live="polite" role="status">
+    <template x-for="toast in $store.toasts.items" :key="toast.id">
+      <div class="pointer-events-auto rounded-lg bg-slate-900 px-4 py-2 text-sm text-white shadow-lg" x-text="toast.message"></div>
+    </template>
+  </div>
+</body>
+</html>
