@@ -58,6 +58,7 @@ OPENING_BALANCE_LOCKED = "Saldo awal terkunci karena sudah ada transaksi."
 OPENING_BALANCE_SAVED = "Saldo awal disimpan."
 DATE_BEFORE_OPENING = "Tanggal transaksi tidak boleh sebelum tanggal saldo awal ({date})."
 TXN_DATE_AFTER_TODAY = "Tanggal tidak boleh melebihi hari ini."
+TRANSACTION_NOT_FOUND = "Transaksi tidak ditemukan."
 
 # --- Angka ----------------------------------------------------------------
 NUMBER_INVALID = "{field} harus berupa angka."
