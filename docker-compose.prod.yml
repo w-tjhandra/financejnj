@@ -1,75 +1,78 @@
-version: "3.8"
+name: telur-finance
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: telur-finance-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - db-data:/var/lib/postgresql/data
-      - ./backup:/backup
-    networks:
-      - telur-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: production
-    container_name: telur-finance-app
+      target: runtime
     restart: unless-stopped
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.production
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=0
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - MEDIA_ROOT=/media
-      - STATIC_ROOT=/static
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in .env}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-1}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-31536000}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_HOST: ${POSTGRES_HOST:?Set POSTGRES_HOST in .env}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      DJANGO_STATIC_ROOT: /static
+      DJANGO_MEDIA_ROOT: /media
+      TZ: Asia/Jakarta
     volumes:
-      - media-data:/media
       - static-data:/static
-    depends_on:
-      db:
-        condition: service_healthy
+      - media-data:/media
+    expose:
+      - "8000"
+    command:
+      - sh
+      - -c
+      - python manage.py collectstatic --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 60 --access-logfile - --error-logfile -
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, urllib.request; host=os.environ['DJANGO_ALLOWED_HOSTS'].split(',')[0].strip(); request=urllib.request.Request('http://127.0.0.1:8000/healthz', headers={'Host':host,'X-Forwarded-Proto':'https'}); urllib.request.urlopen(request, timeout=3)"
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     networks:
       - telur-network
+      - postgres-network
 
   caddy:
     image: caddy:2-alpine
-    container_name: telur-finance-caddy
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-      - static-data:/static
-      - media-data:/media
+      - static-data:/static:ro
+      - media-data:/media:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks:
       - telur-network
 
 volumes:
-  db-data:
-  media-data:
   static-data:
+  media-data:
   caddy-data:
   caddy-config:
 
 networks:
   telur-network:
     driver: bridge
+  postgres-network:
+    name: ${POSTGRES_NETWORK:?Set POSTGRES_NETWORK to the existing PostgreSQL Docker network}
+    external: true
