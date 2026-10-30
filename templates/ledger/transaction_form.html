@@ -9,13 +9,6 @@
     <h1 class="mt-1 text-2xl font-semibold text-slate-900">
       {% if mode == "edit" %}Ubah transaksi{% else %}Catat transaksi{% endif %}
     </h1>
-    <p class="mt-1 text-sm text-slate-600">
-      {% if mode == "edit" %}
-        Perubahan qty atau tanggal ikut menyesuaikan stok dan saldo berikutnya.
-      {% else %}
-        Transaksi ber-stok otomatis membuat pergerakan stok.
-      {% endif %}
-    </p>
   </header>
 
   {% if duplicate_banner %}
@@ -48,8 +41,6 @@
           {{ form.date }}
           {% if form.date.errors %}
             <p role="alert" class="mt-1 text-sm text-red-700">{{ form.date.errors|join:" " }}</p>
-          {% else %}
-            <p class="mt-1 text-xs text-slate-500">Tidak boleh melebihi hari ini (WIB).</p>
           {% endif %}
         </div>
 
@@ -66,8 +57,6 @@
           {{ form.item }}
           {% if form.item.errors %}
             <p role="alert" class="mt-1 text-sm text-red-700">{{ form.item.errors|join:" " }}</p>
-          {% else %}
-            <p class="mt-1 text-xs text-slate-500">Pilihan item mengikuti arus yang dipilih.</p>
           {% endif %}
         </div>
 
@@ -80,8 +69,6 @@
           {{ form.amount }}
           {% if form.amount.errors %}
             <p role="alert" class="mt-1 text-sm text-red-700">{{ form.amount.errors|join:" " }}</p>
-          {% else %}
-            <p class="mt-1 text-xs text-slate-500">Gunakan format Indonesia, mis. 520.000,00.</p>
           {% endif %}
         </div>
 

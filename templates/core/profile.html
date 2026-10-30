@@ -6,9 +6,6 @@
 <div class="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 lg:py-8">
   <header class="mb-6">
     <h1 class="text-2xl font-semibold text-slate-900">Profil usaha</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      Nama usaha dipakai di header aplikasi dan laporan. Logo tersedia pada fase berikutnya.
-    </p>
   </header>
 
   <div class="card">
@@ -50,8 +47,6 @@
           {{ form.email }}
           {% if form.email.errors %}
             <p role="alert" class="mt-1 text-sm text-red-700">{{ form.email.errors|join:" " }}</p>
-          {% else %}
-            <p class="mt-1 text-xs text-slate-500">Opsional. Format email harus valid.</p>
           {% endif %}
         </div>
       </div>

@@ -44,8 +44,7 @@
                 <form method="post" action="{% url 'master:category_deactivate' category.pk %}"
                       hx-post="{% url 'master:category_deactivate' category.pk %}"
                       hx-target="#category-panel" hx-swap="outerHTML"
-                      hx-confirm="Nonaktifkan kategori ini?"
-                      onsubmit="return confirm('Nonaktifkan kategori ini?')">
+                      hx-confirm="Nonaktifkan kategori ini?">
                   {% csrf_token %}
                   <button type="submit" class="text-sm font-medium text-amber-800 hover:underline">Nonaktifkan</button>
                 </form>
@@ -61,8 +60,7 @@
               <form method="post" action="{% url 'master:category_delete' category.pk %}"
                     hx-post="{% url 'master:category_delete' category.pk %}"
                     hx-target="#category-panel" hx-swap="outerHTML"
-                    hx-confirm="Hapus kategori ini? Tindakan ini tidak bisa dibatalkan."
-                    onsubmit="return confirm('Hapus kategori ini? Tindakan ini tidak bisa dibatalkan.')">
+                    hx-confirm="Hapus kategori ini? Tindakan ini tidak bisa dibatalkan.">
                 {% csrf_token %}
                 <button type="submit" class="text-sm font-medium text-red-700 hover:underline">Hapus</button>
               </form>

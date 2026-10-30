@@ -6,26 +6,25 @@
   <!-- Header + Tombol Baru -->
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
     <h1 class="text-2xl font-semibold text-gray-800">Transaksi</h1>
-    <a href="{% url 'ledger:transaction_create' %}" class="btn btn-primary self-start">
-      + Transaksi Baru
+    <a href="{% url 'transaction_create' %}" class="btn btn-primary self-start">
+      + Catat transaksi
     </a>
   </div>
 
   <!-- Filter Bar -->
-  <form method="get" action="{% url 'ledger:transaction_list' %}" class="bg-white rounded-lg shadow p-4 mb-6 space-y-4" id="filter-form">
-    <!-- Baris 1: Tanggal + Arus + Kategori -->
+  <form method="get" action="{% url 'transaction_list' %}" class="card mb-6 space-y-4" id="filter-form">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div>
         <label for="id_date_from" class="label">Tanggal Mulai</label>
-        <input type="date" name="date_from" id="id_date_from" value="{{ date_from_display }}" class="input w-full" />
+        <input type="date" name="date_from" id="id_date_from" value="{{ filters.date_from|date:'Y-m-d' }}" class="input w-full" />
       </div>
       <div>
         <label for="id_date_to" class="label">Tanggal Akhir</label>
-        <input type="date" name="date_to" id="id_date_to" value="{{ date_to_display }}" class="input w-full" />
+        <input type="date" name="date_to" id="id_date_to" value="{{ filters.date_to|date:'Y-m-d' }}" class="input w-full" />
       </div>
       <div>
         <label for="id_flow" class="label">Arus</label>
-        <select name="flow" id="id_flow" class="select w-full" hx-get="{% url 'ledger:transaction_item_options' %}" hx-target="#id_item" hx-include="[name='flow']" hx-trigger="change">
+        <select name="flow" id="id_flow" class="select w-full" hx-get="{% url 'transaction_item_options' %}" hx-target="#id_item" hx-include="[name='flow']" hx-trigger="change">
           <option value="">Semua</option>
           <option value="income" {% if filters.flow == 'income' %}selected{% endif %}>Pemasukan</option>
           <option value="expense" {% if filters.flow == 'expense' %}selected{% endif %}>Pengeluaran</option>
@@ -33,7 +32,7 @@
       </div>
       <div>
         <label for="id_category" class="label">Kategori</label>
-        <select name="category" id="id_category" class="select w-full" hx-get="{% url 'ledger:transaction_item_options' %}" hx-target="#id_item" hx-include="[name='flow'],[name='category']" hx-trigger="change">
+        <select name="category" id="id_category" class="select w-full" hx-get="{% url 'transaction_item_options' %}" hx-target="#id_item" hx-include="[name='flow'],[name='category']" hx-trigger="change">
           <option value="">Semua</option>
           {% for cat in categories %}
             <option value="{{ cat.pk }}" {% if filters.category_id == cat.pk %}selected{% endif %}>
@@ -47,73 +46,73 @@
       </div>
     </div>
 
-    <!-- Baris 2: Item + Nominal + Keyword -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-      <div class="sm:col-span-2 lg:col-span-2">
-        <label for="id_item" class="label">Item</label>
-        <select name="item" id="id_item" class="select w-full">
-          <option value="">Semua</option>
-          {% for it in items %}
-            <option value="{{ it.pk }}" {% if filters.item_id == it.pk %}selected{% endif %}>
-              {{ it.name }}{% if not it.is_active %} (nonaktif){% endif %}
-            </option>
-          {% endfor %}
-        </select>
-        {% if filters.item_id and not items|length %}
-          <p class="text-red-600 text-sm mt-1">{{ messages.FILTER_ITEM_INVALID }}</p>
-        {% endif %}
+    <details class="filter-advanced">
+      <summary>Filter lainnya</summary>
+      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <label for="id_item" class="label">Item</label>
+          <select name="item" id="id_item" class="select w-full">
+            <option value="">Semua</option>
+            {% for it in items %}
+              <option value="{{ it.pk }}" {% if filters.item_id == it.pk %}selected{% endif %}>
+                {{ it.name }}{% if not it.is_active %} (nonaktif){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          {% if filters.item_id and not items|length %}
+            <p class="text-red-600 text-sm mt-1">{{ messages.FILTER_ITEM_INVALID }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_amount_min" class="label">Nominal minimum</label>
+          <input type="text" name="amount_min" id="id_amount_min" value="{{ amount_min_display }}" placeholder="0" class="input w-full" inputmode="decimal" />
+        </div>
+        <div>
+          <label for="id_amount_max" class="label">Nominal maksimum</label>
+          <input type="text" name="amount_max" id="id_amount_max" value="{{ amount_max_display }}" placeholder="0" class="input w-full" inputmode="decimal" />
+        </div>
+        <div>
+          <label for="id_keyword" class="label">Keterangan</label>
+          <input type="text" name="keyword" id="id_keyword" value="{{ filters.keyword|default:'' }}" placeholder="Cari keterangan" class="input w-full" />
+        </div>
+        <div>
+          <label for="id_sort" class="label">Urutkan</label>
+          <select name="sort" id="id_sort" class="select w-full">
+            <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>Tanggal terbaru</option>
+            <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>Tanggal terlama</option>
+            <option value="amount_desc" {% if filters.sort == 'amount_desc' %}selected{% endif %}>Nominal terbesar</option>
+            <option value="amount_asc" {% if filters.sort == 'amount_asc' %}selected{% endif %}>Nominal terkecil</option>
+            <option value="created_desc" {% if filters.sort == 'created_desc' %}selected{% endif %}>Dibuat terbaru</option>
+            <option value="created_asc" {% if filters.sort == 'created_asc' %}selected{% endif %}>Dibuat terlama</option>
+          </select>
+        </div>
+        <label for="id_show_deleted" class="flex items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" name="show_deleted" id="id_show_deleted" value="1" {% if filters.show_deleted %}checked{% endif %} class="checkbox" />
+          Tampilkan yang dihapus
+        </label>
       </div>
-      <div>
-        <label for="id_amount_min" class="label">Nominal Min</label>
-        <input type="text" name="amount_min" id="id_amount_min" value="{{ amount_min_display }}" placeholder="0" class="input w-full text-right" inputmode="decimal" />
-      </div>
-      <div>
-        <label for="id_amount_max" class="label">Nominal Maks</label>
-        <input type="text" name="amount_max" id="id_amount_max" value="{{ amount_max_display }}" placeholder="0" class="input w-full text-right" inputmode="decimal" />
-      </div>
-      <div>
-        <label for="id_keyword" class="label">Kata Kunci</label>
-        <input type="text" name="keyword" id="id_keyword" value="{{ filters.keyword|default:'' }}" placeholder="keterangan..." class="input w-full" />
-      </div>
-    </div>
-
-    <!-- Baris 3: Sort + Show Deleted + Actions -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-      <div>
-        <label for="id_sort" class="label">Urutkan</label>
-        <select name="sort" id="id_sort" class="select w-full">
-          <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>Tanggal (terbaru)</option>
-          <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>Tanggal (terlama)</option>
-          <option value="amount_desc" {% if filters.sort == 'amount_desc' %}selected{% endif %}>Nominal (terbesar)</option>
-          <option value="amount_asc" {% if filters.sort == 'amount_asc' %}selected{% endif %}>Nominal (terkecil)</option>
-          <option value="created_desc" {% if filters.sort == 'created_desc' %}selected{% endif %}>Dibuat (terbaru)</option>
-          <option value="created_asc" {% if filters.sort == 'created_asc' %}selected{% endif %}>Dibuat (terlama)</option>
-        </select>
-      </div>
-      <div class="flex items-center gap-2">
-        <input type="checkbox" name="show_deleted" id="id_show_deleted" value="1" {% if filters.show_deleted %}checked{% endif %} class="checkbox" />
-        <label for="id_show_deleted" class="label cursor-pointer mb-0">Termasuk dihapus</label>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button type="submit" class="btn btn-primary">Terapkan</button>
-        <a href="{% url 'ledger:transaction_list' %}" class="btn btn-secondary">Reset</a>
-        <button type="button" class="btn btn-secondary" disabled>Export Hasil</button>
+    </details>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <span class="text-sm text-slate-500">{{ result.total_count }} transaksi</span>
+      <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">Cari</button>
+        <a href="{% url 'transaction_list' %}" class="btn btn-secondary">Reset</a>
       </div>
     </div>
   </form>
 
   <!-- Results -->
-  <div class="bg-white rounded-lg shadow overflow-hidden">
+  <div class="card overflow-hidden">
     <!-- Summary -->
     <div class="px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
       <span>
-        Menampilkan <strong>{{ result.transactions|length }}</strong> dari <strong>{{ result.total_count }}</strong> transaksi
+        <strong>{{ result.transactions|length }}</strong> dari <strong>{{ result.total_count }}</strong>
         {% if result.total_active != result.total_count %}
-          ({{ result.total_active }} aktif)
+          · {{ result.total_active }} aktif
         {% endif %}
       </span>
       <span>
-        Halaman {{ result.page }} dari {{ result.total_pages|default:"1" }}
+        {{ result.page }} / {{ result.total_pages|default:"1" }}
       </span>
     </div>
 
@@ -169,9 +168,9 @@
               </td>
               <td class="px-4 py-3 text-center">
                 {% if not txn.deleted_at %}
-                  <a href="{% url 'ledger:transaction_detail' txn.pk %}" class="btn btn-sm btn-ghost">Detail</a>
+                  <a href="{% url 'transaction_detail' txn.pk %}" class="btn btn-sm btn-ghost">Detail</a>
                 {% else %}
-                  <a href="{% url 'ledger:transaction_detail' txn.pk %}" class="btn btn-sm btn-ghost">Detail</a>
+                  <a href="{% url 'transaction_detail' txn.pk %}" class="btn btn-sm btn-ghost">Detail</a>
                 {% endif %}
               </td>
             </tr>
@@ -207,7 +206,7 @@
             <span class="text-xs {% if txn.deleted_at %}text-red-600{% else %}text-green-600{% endif %}">
               {% if txn.deleted_at %}Dihapus{% else %}Aktif{% endif %}
             </span>
-            <a href="{% url 'ledger:transaction_detail' txn.pk %}" class="btn btn-sm btn-primary">Detail</a>
+            <a href="{% url 'transaction_detail' txn.pk %}" class="btn btn-sm btn-primary">Detail</a>
           </div>
         </article>
       {% empty %}

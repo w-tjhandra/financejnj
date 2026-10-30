@@ -4,8 +4,6 @@
   {{ form.category }}
   {% if form.category.errors %}
     <p role="alert" class="mt-1 text-sm text-red-700">{{ form.category.errors|join:" " }}</p>
-  {% else %}
-    <p class="mt-1 text-xs text-slate-500">Default mengikuti item, masih bisa diubah.</p>
   {% endif %}
 </div>
 
@@ -25,12 +23,8 @@
          {% if read_only %}disabled{% endif %}>
   {% if form.qty.errors %}
     <p role="alert" class="mt-1 text-sm text-red-700">{{ form.qty.errors|join:" " }}</p>
-  {% elif selected_item.stock_item_id %}
-    <p class="mt-1 text-xs text-slate-500">Stok berubah mengikuti arah arus transaksi.</p>
-  {% elif selected_item %}
+  {% elif not selected_item.stock_item_id %}
     <p class="mt-1 text-xs text-slate-500">Qty tidak mengubah stok.</p>
-  {% else %}
-    <p class="mt-1 text-xs text-slate-500">Wajib untuk item ber-stok, opsional untuk item non-stok.</p>
   {% endif %}
 </div>
 
@@ -50,10 +44,6 @@
          {% if read_only %}disabled{% endif %}>
   {% if form.unit.errors %}
     <p role="alert" class="mt-1 text-sm text-red-700">{{ form.unit.errors|join:" " }}</p>
-  {% elif selected_item.stock_item_id %}
-    <p class="mt-1 text-xs text-slate-500">Satuan mengikuti jenis stok.</p>
-  {% else %}
-    <p class="mt-1 text-xs text-slate-500">Satuan bebas, mis. kg, ekor, atau karung.</p>
   {% endif %}
 </div>
 
@@ -62,21 +52,15 @@
   {{ form.payment_method }}
   {% if form.payment_method.errors %}
     <p role="alert" class="mt-1 text-sm text-red-700">{{ form.payment_method.errors|join:" " }}</p>
-  {% else %}
-    <p class="mt-1 text-xs text-slate-500">Terisi otomatis dari item, bisa diubah.</p>
   {% endif %}
 </div>
 
 <div>
-  <label for="{{ form.period_month.id_for_label }}" class="label">
-    Bulan gaji <span class="font-normal text-slate-400">(khusus item bulanan)</span>
-  </label>
+  <label for="{{ form.period_month.id_for_label }}" class="label">Bulan gaji</label>
   <input type="month" name="period_month" id="{{ form.period_month.id_for_label }}" class="input"
          value="{{ form.period_month.value|default_if_none:'' }}"
          max="{{ month_max }}" {% if read_only %}disabled{% endif %}>
   {% if form.period_month.errors %}
     <p role="alert" class="mt-1 text-sm text-red-700">{{ form.period_month.errors|join:" " }}</p>
-  {% else %}
-    <p class="mt-1 text-xs text-slate-500">Wajib untuk item bulanan; tidak boleh setelah bulan tanggal transaksi.</p>
   {% endif %}
 </div>

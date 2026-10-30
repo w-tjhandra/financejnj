@@ -6,6 +6,8 @@ from datetime import date
 from io import BytesIO
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q, Sum
+from django.db.models.functions import TruncDate
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
