@@ -63,8 +63,8 @@ docker network inspect telur-finance_telur-network \
 Jangan membuka port 5432 ke internet. Batasi `pg_hba.conf` dan firewall hanya
 untuk subnet Docker yang diperlukan. Jika memakai UFW, jangan menambahkan aturan
 yang mengizinkan port 5432 dari semua alamat. Setelah mengubah konfigurasi
-PostgreSQL, restart service PostgreSQL. Atur domain pada
-`DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, dan `Caddyfile`.
+PostgreSQL, restart service PostgreSQL. Isi `DJANGO_ALLOWED_HOSTS` dan
+`DJANGO_CSRF_TRUSTED_ORIGINS` sesuai domain.
 
 Password database yang pernah dibagikan sebaiknya diganti sebelum deploy; jangan
 simpan password asli di Git. `POSTGRES_PASSWORD` di `.env` harus cocok dengan
@@ -72,9 +72,9 @@ password user PostgreSQL yang aktif.
 
 Jalankan script deploy. Pada checkout Git, script menarik branch `main`; pada
 folder source yang diunggah/manual, script memakai file yang sudah ada tanpa
-`git pull`. Script membuat backup database, membangun aplikasi, lalu
-menyesuaikan ownership volume static/media, lalu menyalakan Django dan Caddy
-tanpa membuat/menghapus PostgreSQL:
+`git pull`. Script membuat backup database, membangun aplikasi, menyesuaikan
+ownership volume static/media, lalu menyalakan Django dan Caddy tanpa
+membuat/menghapus PostgreSQL:
 
 ```bash
 ./deploy.sh
@@ -82,7 +82,27 @@ docker compose --env-file .env -f docker-compose.prod.yml ps
 docker compose --env-file .env -f docker-compose.prod.yml logs -f app
 ```
 
-PostgreSQL dikelola oleh Ubuntu, terpisah dari Compose ini.
+Port publik 80/443 tetap dikelola web server yang sudah ada di host. Caddy
+container hanya bind ke `127.0.0.1:8080` (atau nilai `PROXY_PORT` di `.env`)
+dan melayani HTTP di belakang reverse proxy tersebut. Untuk Nginx, konfigurasi
+proxy pada virtual host HTTPS yang sudah ada dapat menggunakan:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Pastikan virtual host meneruskan `/static/` dan `/media/` ke upstream ini juga,
+agar Caddy menyajikan file dari volume. Konfigurasi TLS dan redirect
+HTTP-ke-HTTPS tetap di web server host; Caddy tidak mengelola sertifikat domain
+ini. PostgreSQL dikelola oleh Ubuntu, terpisah dari Compose.
 
 ## Perintah umum
 

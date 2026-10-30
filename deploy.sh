@@ -113,4 +113,5 @@ done
 [[ -n "$caddy_container" && "$caddy_status" == running ]] || fail "service caddy belum berjalan setelah 120 detik."
 
 "${compose[@]}" ps
-printf '\nDeploy selesai. Caddy menangani HTTPS pada port 80/443.\n'
+printf '\nDeploy selesai. Arahkan reverse proxy HTTPS ke http://127.0.0.1:%s.\n' \
+  "$(read_env_value PROXY_PORT | sed 's/^$/8080/')"
