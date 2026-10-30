@@ -442,6 +442,10 @@ textarea {
   line-height: 1.2;
 }
 
+.page-heading + .dashboard-section {
+  margin-top: 0;
+}
+
 .eyebrow {
   color: #597362;
   font-size: .64rem;

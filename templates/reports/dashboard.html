@@ -10,30 +10,14 @@
 {% block content %}
 <div class="workspace-page">
   <header class="page-heading">
-    <div>
-      <p class="eyebrow">RUANG KERJA</p>
-      <h1>Dashboard</h1>
-      <p class="page-description">Semua yang perlu dicatat dan dipantau, dalam satu tempat.</p>
-    </div>
+    <h1>Dashboard</h1>
   </header>
-
-  <section class="dashboard-intro" aria-labelledby="welcome-title">
-    <div>
-      <p class="eyebrow">USAHA</p>
-      <h2 id="welcome-title">{{ company_name|default:"Peternakan Anda" }}</h2>
-      <p>Catat aktivitas hari ini atau buka ringkasan untuk melihat perkembangan usaha.</p>
-    </div>
-    <a href="{% url 'transaction_create' %}" class="btn">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg>
-      Catat transaksi
-    </a>
-  </section>
 
   <section class="dashboard-section" aria-labelledby="summary-title">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">RINGKASAN</p>
-        <h2 id="summary-title">{{ dashboard_month_label }}</h2>
+        <p class="eyebrow">{{ dashboard_month_label }}</p>
+        <h2 id="summary-title">Ringkasan keuangan</h2>
       </div>
       <a href="{% url 'reports:monthly_recap' %}" class="dashboard-section-link">Lihat rekap →</a>
     </div>
@@ -41,19 +25,16 @@
       <article class="dashboard-stat">
         <span class="dashboard-stat-label">Pemasukan</span>
         <strong class="dashboard-stat-value is-income">Rp {{ dashboard_income_display }}</strong>
-        <span class="dashboard-stat-note">Bulan ini</span>
       </article>
       <article class="dashboard-stat">
         <span class="dashboard-stat-label">Pengeluaran</span>
         <strong class="dashboard-stat-value is-expense">Rp {{ dashboard_expense_display }}</strong>
-        <span class="dashboard-stat-note">Bulan ini</span>
       </article>
       <article class="dashboard-stat">
         <span class="dashboard-stat-label">Selisih</span>
         <strong class="dashboard-stat-value{% if dashboard_net < 0 %} is-expense{% else %} is-income{% endif %}">
           Rp {{ dashboard_net_display }}
         </strong>
-        <span class="dashboard-stat-note">Pemasukan dikurangi pengeluaran</span>
       </article>
     </div>
   </section>
@@ -67,7 +48,7 @@
         <div class="dashboard-chart-heading">
           <div>
             <h2>Arus kas</h2>
-            <p>Harian · {{ dashboard_month_label }}</p>
+            <p>Harian</p>
           </div>
         </div>
         <div class="dashboard-chart-wrap">
@@ -77,8 +58,7 @@
       <article class="dashboard-chart-card">
         <div class="dashboard-chart-heading">
           <div>
-            <h2>Pengeluaran</h2>
-            <p>Kategori terbesar bulan ini</p>
+            <h2>Pengeluaran per kategori</h2>
           </div>
         </div>
         {% if expense_category_count %}
@@ -91,74 +71,5 @@
       </article>
     </div>
   </section>
-
-  <section class="dashboard-section" aria-labelledby="actions-title">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">AKSI CEPAT</p>
-        <h2 id="actions-title">Mulai dari sini</h2>
-      </div>
-    </div>
-    <div class="action-grid">
-      <a href="{% url 'transaction_create' %}" class="action-card">
-        <span class="action-icon action-icon-green" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8m-8 4h5m5 5v-4m-2 2h4"/></svg>
-        </span>
-        <span class="action-copy">
-          <strong>Catat transaksi</strong>
-          <small>Masukkan pemasukan atau pengeluaran.</small>
-        </span>
-        <span class="action-arrow" aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'stock:daily' %}" class="action-card">
-        <span class="action-icon action-icon-amber" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 12v9"/></svg>
-        </span>
-        <span class="action-copy">
-          <strong>Catat stok harian</strong>
-          <small>Masukkan produksi atau pemakaian pakan.</small>
-        </span>
-        <span class="action-arrow" aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'stock:adjustment' %}" class="action-card">
-        <span class="action-icon action-icon-blue" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
-        </span>
-        <span class="action-copy">
-          <strong>Sesuaikan stok</strong>
-          <small>Koreksi jumlah dengan alasan yang tercatat.</small>
-        </span>
-        <span class="action-arrow" aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
-
-  <section class="dashboard-section" aria-labelledby="overview-title">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">PINTASAN</p>
-        <h2 id="overview-title">Lihat dan kelola</h2>
-      </div>
-    </div>
-    <div class="dashboard-links">
-      <a href="{% url 'transaction_list' %}">
-        <span><strong>Daftar transaksi</strong><small>Telusuri, filter, dan periksa catatan transaksi.</small></span>
-        <span aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'reports:monthly_recap' %}">
-        <span><strong>Rekap keuangan</strong><small>Buka ringkasan bulanan dan ekspor laporan.</small></span>
-        <span aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'stock:daily' %}">
-        <span><strong>Persediaan</strong><small>Lihat posisi stok dan riwayat pergerakannya.</small></span>
-        <span aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'audit:list' %}">
-        <span><strong>Riwayat aktivitas</strong><small>Periksa perubahan yang tercatat di aplikasi.</small></span>
-        <span aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
-
 </div>
 {% endblock %}

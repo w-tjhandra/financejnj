@@ -117,6 +117,9 @@ def test_dashboard_menampilkan_ringkasan_dan_data_infografis(completed_setup, cl
     assert 'id="dashboard-cashflow-chart"' in content
     assert 'id="dashboard-category-chart"' in content
     assert "dashboard.js" in content
+    assert "Catat aktivitas hari ini" not in content
+    assert "Mulai dari sini" not in content
+    assert "Aksi cepat" not in content
 
 
 @pytest.mark.django_db
