@@ -11,6 +11,7 @@ venv/
 /staticfiles/
 /media/
 /backups/
+/.well-known/
 *.log
 
 # Alat
