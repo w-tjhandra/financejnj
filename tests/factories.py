@@ -26,6 +26,9 @@ def make_stock_item(code="egg", name="Telur", unit="kg", opening_qty=Decimal("0"
 
 
 def make_item(name="Item Uji", flow="expense", **kwargs):
+    stock_item = kwargs.get("stock_item")
+    if stock_item and "unit" not in kwargs:
+        kwargs["unit"] = stock_item.unit
     return Item.objects.create(name=name, flow=flow, **kwargs)
 
 

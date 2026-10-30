@@ -93,6 +93,14 @@ REASON_MIN_10 = "Alasan minimal 10 karakter."
 SALARY_CATEGORY = "Gaji hanya untuk kategori LAYER, DOC, atau UMUM."
 PERIOD_LOCKED_SHORT = "Periode terkunci."
 
+# --- Stok harian & penyesuaian (FR-09, FR-10, FR-14, FR-15) --------------
+DAILY_PRODUKSI_HANYA_TELUR_KOTORAN = "Produksi hanya untuk telur atau kotoran."
+DAILY_PEMAKAIAN_HANYA_PAKAN = "Pemakaian hanya untuk pakan."
+DAILY_MANUAL_TIDAK_DITEMUKAN = "Movement manual tidak ditemukan."
+DAILY_MANUAL_BUKAN_MANUAL = "Hanya movement manual yang bisa dihapus lewat sini."
+STOCK_MOVEMENT_DICATAT = "Movement stok dicatat."
+STOCK_MOVEMENT_DIHAPUS = "Movement stok dihapus."
+
 # --- Kunci periode --------------------------------------------------------
 PERIOD_LOCKED = "Periode {month} {year} terkunci. Buka kunci terlebih dahulu."
 CHAIN_GAP = "Kunci {month} {year} terlebih dahulu (tidak boleh ada lubang)."

@@ -1,4 +1,4 @@
-"""URL Pengaturan → Stok (S-16)."""
+"""URL Stok: pengaturan (S-16), input harian (S-08), penyesuaian (S-09)."""
 
 from django.urls import path
 
@@ -7,6 +7,8 @@ from stock import views
 app_name = "stock"
 
 urlpatterns = [
-    path("stok", views.stock_settings, name="settings"),
-    path("stok/<str:code>", views.stock_update, name="update"),
+    path("", views.stock_settings, name="settings"),
+    path("harian", views.daily_stock, name="daily"),
+    path("penyesuaian", views.stock_adjustment, name="adjustment"),
+    path("<str:code>", views.stock_update, name="update"),
 ]

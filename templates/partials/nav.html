@@ -28,7 +28,17 @@
     <ul class="flex items-center gap-1 overflow-x-auto lg:flex-col lg:items-stretch lg:gap-1">
       <li>
         <a href="{% url 'stock:settings' %}" class="nav-link" {% if request.resolver_match.url_name == 'stock_settings' or request.resolver_match.url_name == 'stock_update' %}aria-current="page"{% endif %}>
-          Stok
+          Pengaturan
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'stock:daily' %}" class="nav-link" {% if request.resolver_match.url_name == 'daily_stock' %}aria-current="page"{% endif %}>
+          Harian
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'stock:adjustment' %}" class="nav-link" {% if request.resolver_match.url_name == 'stock_adjustment' %}aria-current="page"{% endif %}>
+          Penyesuaian
         </a>
       </li>
       <li>
@@ -44,6 +54,30 @@
       <li>
         <a href="{% url 'account_settings' %}" class="nav-link" {% if request.resolver_match.url_name == 'account_settings' %}aria-current="page"{% endif %}>
           Akun
+        </a>
+      </li>
+    </ul>
+
+    <p class="hidden px-3 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400 lg:block">Rekap</p>
+    <ul class="flex items-center gap-1 overflow-x-auto lg:flex-col lg:items-stretch lg:gap-1">
+      <li>
+        <a href="{% url 'reports:daily_recap' %}" class="nav-link" {% if request.resolver_match.url_name == 'daily_recap_view' %}aria-current="page"{% endif %}>
+          Harian
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'reports:weekly_recap' %}" class="nav-link" {% if request.resolver_match.url_name == 'weekly_recap_view' %}aria-current="page"{% endif %}>
+          Mingguan
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'reports:monthly_recap' %}" class="nav-link" {% if request.resolver_match.url_name == 'monthly_recap_view' %}aria-current="page"{% endif %}>
+          Bulanan
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'reports:yearly_recap' %}" class="nav-link" {% if request.resolver_match.url_name == 'yearly_recap_view' %}aria-current="page"{% endif %}>
+          Tahunan
         </a>
       </li>
     </ul>

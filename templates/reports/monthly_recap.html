@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% load core_tags %}
+
+{% block title %}Rekap Bulanan · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-slate-900">Rekap Bulanan</h1>
+    <p class="mt-1 text-sm text-slate-600">
+      Empat baris ringkasan dan detail per item untuk {{ result.period_label }}.
+    </p>
+  </header>
+
+  <form method="get" class="card mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+      <div>
+        <label for="id_month" class="label">Bulan</label>
+        <input type="month" name="month" id="id_month" value="{{ month }}" class="input w-full" />
+      </div>
+      <div>
+        <label for="id_category" class="label">Kategori</label>
+        <select name="category" id="id_category" class="select w-full">
+          <option value="">Semua</option>
+          {% for cat in categories %}
+            <option value="{{ cat.pk }}" {% if selected_category == cat.pk %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" class="btn">Tampilkan</button>
+        <a href="{% url 'reports:monthly_recap' %}" class="btn btn-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <section class="card mb-6 overflow-hidden">
+    <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Ringkasan Bulan (empat baris)</h2>
+    <table class="w-full text-sm">
+      <thead>
+        <tr>
+          <th class="px-4 py-3 text-left font-medium text-slate-500">Baris</th>
+          <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {% for row in result.summary %}
+          <tr class="{% if row.key == 'selisih' %}font-semibold text-slate-900{% else %}text-slate-700{% endif %}">
+            <td class="px-4 py-3">{{ row.label }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% if result.gaji %}
+    <section class="card mb-6 overflow-hidden">
+      <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Gaji Karyawan per Kategori</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-slate-500">Kategori</th>
+              <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for row in result.gaji %}
+              <tr>
+                <td class="px-4 py-3">{{ row.kategori }}</td>
+                <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="2" class="px-4 py-8 text-center text-slate-500">Tidak ada gaji</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="card mb-6 overflow-hidden">
+    <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Detail per Transaksi</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Tanggal</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Kategori</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Item</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Arus</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Qty</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Saldo Kas</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Stok Berjalan</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for row in result.detail %}
+            <tr>
+              <td class="px-4 py-3">{{ row.tanggal|date:"d/m/Y" }}</td>
+              <td class="px-4 py-3">{{ row.kategori }}</td>
+              <td class="px-4 py-3">{{ row.item }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                  {% if row.flow == 'income' %}bg-emerald-50 text-emerald-800{% else %}bg-rose-50 text-rose-800{% endif %}">
+                  {{ FLOW_LABELS|get_item:row.flow }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{% if row.qty %}{{ row.qty|floatformat:3 }}{% else %}-{% endif %}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.saldo_kas|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{% if row.stock_item_id %}{{ row.stok_berjalan|floatformat:3 }}{% else %}-{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="px-4 py-8 text-center text-slate-500">Tidak ada transaksi</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card overflow-hidden">
+    <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Stok per Jenis</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Jenis Stok</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Opening</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">In</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Out</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Adj</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Closing</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for row in result.stock %}
+            <tr>
+              <td class="px-4 py-3">{{ row.nama }} ({{ row.kode }})</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.opening|floatformat:3 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.in_qty|floatformat:3 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.out_qty|floatformat:3 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.adj|floatformat:3 }}</td>
+              <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ row.closing|floatformat:3 }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-4 py-8 text-center text-slate-500">Tidak ada jenis stok</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

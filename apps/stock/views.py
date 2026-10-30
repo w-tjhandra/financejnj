@@ -1,4 +1,4 @@
-"""Layar Pengaturan → Stok & ambang minimum (S-16, FR-06)."""
+"""Layar Stok: pengaturan (S-16), input harian (S-08), dan penyesuaian (S-09)."""
 
 from __future__ import annotations
 
@@ -11,11 +11,19 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 
 from core import messages
-from core.errors import DomainError
+from core.errors import DomainError, StockConflict
 from core.types import RequestMeta
 from master.models import StockItem
-from stock.forms import StockSettingsForm
+from stock.forms import StockAdjustmentForm, StockSettingsForm, StokHarianForm
+from stock.models import StockMovement
 from stock.queries import stock_overview
+from stock.services.daily import (
+    CONSUMPTION_CODES,
+    PRODUCTION_CODES,
+    adjust_stock,
+    record_consumption,
+    record_production,
+)
 from stock.services.settings import update_stock_settings
 
 
@@ -104,3 +112,115 @@ def stock_update(request: HttpRequest, code: str) -> HttpResponse:
             return redirect("stock:settings")
 
     return _render(request, bound_form=form, status=200)
+
+
+def _attach_error(form, exc: DomainError) -> None:
+    if exc.fields:
+        for field, message in exc.fields.items():
+            form.add_error(field if field in form.fields else None, message)
+    else:
+        form.add_error(None, exc.message)
+
+
+def _daily_context(form, show_deleted: bool = False) -> dict:
+    return {
+        "form": form,
+        "cards": stock_overview(),
+        "movements": _movements(show_deleted),
+        "show_deleted": show_deleted,
+    }
+
+
+def _movements(show_deleted: bool):
+    qs = StockMovement.all_objects if show_deleted else StockMovement.objects
+    return (
+        qs.filter(source__in=["manual", "adjustment"])
+        .select_related("stock_item")
+        .order_by("-date", "-id")
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def daily_stock(request: HttpRequest) -> HttpResponse:
+    """S-08: input stok harian (produksi telur/kotoran, pemakaian pakan)."""
+    form = StokHarianForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        stock_item = form.cleaned_data["stock_item"]
+        value_date = form.cleaned_data["date"]
+        quantity = form.cleaned_data["qty"]
+        actor = request.user
+        meta = RequestMeta(
+            ip=request.META.get("REMOTE_ADDR"),
+            user_agent=request.headers.get("User-Agent"),
+        )
+        try:
+            if stock_item.code in PRODUCTION_CODES:
+                record_production(
+                    stock_item=stock_item, date=value_date, qty=quantity, actor=actor, meta=meta
+                )
+            elif stock_item.code in CONSUMPTION_CODES:
+                record_consumption(
+                    stock_item=stock_item, date=value_date, qty=quantity, actor=actor, meta=meta
+                )
+            else:  # pragma: no cover - kode stok dibatasi skema
+                form.add_error(None, messages.DAILY_PEMAKAIAN_HANYA_PAKAN)
+                return render(request, "stock/daily.html", _daily_context(form, False), status=200)
+        except (DomainError, StockConflict) as exc:
+            print(f"VIEW DEBUG: caught exception: {exc}", flush=True)
+            import traceback
+
+            traceback.print_exc()
+            _attach_error(form, exc)
+            return render(request, "stock/daily.html", _daily_context(form, False), status=200)
+        flash.success(request, messages.STOCK_MOVEMENT_DICATAT)
+        return redirect("stock:daily")
+
+    show_deleted = request.GET.get("show_deleted") == "1"
+    return render(
+        request,
+        "stock/daily.html",
+        {
+            "form": form,
+            "cards": stock_overview(),
+            "movements": _movements(show_deleted),
+            "show_deleted": show_deleted,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def stock_adjustment(request: HttpRequest) -> HttpResponse:
+    """S-09: penyesuaian stok (+/-) dengan alasan."""
+    form = StockAdjustmentForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        stock_item = form.cleaned_data["stock_item"]
+        value_date = form.cleaned_data["date"]
+        signed_qty = form.cleaned_data["qty"]
+        reason = form.cleaned_data["reason"]
+        actor = request.user
+        meta = RequestMeta(
+            ip=request.META.get("REMOTE_ADDR"),
+            user_agent=request.headers.get("User-Agent"),
+        )
+        try:
+            adjust_stock(
+                stock_item=stock_item,
+                date=value_date,
+                signed_qty=signed_qty,
+                reason=reason,
+                actor=actor,
+                meta=meta,
+            )
+        except (DomainError, StockConflict) as exc:
+            _attach_error(form, exc)
+            return render(request, "stock/adjustment.html", _adjustment_context(form), status=200)
+        flash.success(request, messages.STOCK_MOVEMENT_DICATAT)
+        return redirect("stock:adjustment")
+
+    return render(request, "stock/adjustment.html", _adjustment_context(form))
+
+
+def _adjustment_context(form: StockAdjustmentForm) -> dict:
+    return {"form": form}
