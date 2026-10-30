@@ -1,6 +1,7 @@
 """Setelan produksi: aman secara default, rahasia wajib dari env."""
 
 import os
+from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -29,3 +30,5 @@ SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 
 # Caddy ada di depan; IP asli diambil dari header proxy (rancangan §3.7).
 TRUST_PROXY_HEADERS = True
+STATIC_ROOT = Path(env("DJANGO_STATIC_ROOT", str(STATIC_ROOT)))
+MEDIA_ROOT = Path(env("DJANGO_MEDIA_ROOT", str(MEDIA_ROOT)))

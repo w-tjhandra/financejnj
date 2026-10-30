@@ -17,13 +17,16 @@ telur-finance.example.com {
     # Compress responses
     encode gzip zstd
 
-    # Static files (served by Caddy for performance)
-    @static {
-        path /static/*
-        path /media/*
+    # Static and uploaded files are stored in separate shared volumes.
+    handle_path /static/* {
+        root * /static
+        file_server
     }
-    root * /static
-    file_server @static
+
+    handle_path /media/* {
+        root * /media
+        file_server
+    }
 
     # Proxy to Django app
     reverse_proxy app:8000 {

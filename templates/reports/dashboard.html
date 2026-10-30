@@ -1,52 +1,94 @@
 {% extends "base.html" %}
 
-{% load core_tags %}
-
-{% block title %}Dashboard · Telur Finance{% endblock %}
+{% block title %}Dashboard · {{ company_name|default:"Telur Finance" }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-  <header class="mb-6">
-    <h1 class="text-2xl font-semibold text-slate-900">Dashboard</h1>
-    <p class="mt-1 text-sm text-slate-600">Ringkasan keuangan dan stok peternakan.</p>
+<div class="workspace-page">
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">RUANG KERJA</p>
+      <h1>Dashboard</h1>
+      <p class="page-description">Semua yang perlu dicatat dan dipantau, dalam satu tempat.</p>
+    </div>
   </header>
 
-  <section aria-labelledby="kpi-heading" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <h2 id="kpi-heading" class="sr-only">Ringkasan utama</h2>
-
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Saldo kas</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+  <section class="dashboard-intro" aria-labelledby="welcome-title">
+    <div>
+      <p class="eyebrow">USAHA</p>
+      <h2 id="welcome-title">{{ company_name|default:"Peternakan Anda" }}</h2>
+      <p>Catat aktivitas hari ini atau buka ringkasan untuk melihat perkembangan usaha.</p>
     </div>
+    <a href="{% url 'transaction_create' %}" class="btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg>
+      Catat transaksi
+    </a>
+  </section>
 
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Pemasukan bulan ini</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-emerald-700">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+  <section class="dashboard-section" aria-labelledby="actions-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">AKSI CEPAT</p>
+        <h2 id="actions-title">Mulai dari sini</h2>
+      </div>
     </div>
-
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Pengeluaran bulan ini</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-red-700">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
-    </div>
-
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Stok telur</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data stok</p>
+    <div class="action-grid">
+      <a href="{% url 'transaction_create' %}" class="action-card">
+        <span class="action-icon action-icon-green" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8m-8 4h5m5 5v-4m-2 2h4"/></svg>
+        </span>
+        <span class="action-copy">
+          <strong>Catat transaksi</strong>
+          <small>Masukkan pemasukan atau pengeluaran.</small>
+        </span>
+        <span class="action-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'stock:daily' %}" class="action-card">
+        <span class="action-icon action-icon-amber" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 12v9"/></svg>
+        </span>
+        <span class="action-copy">
+          <strong>Catat stok harian</strong>
+          <small>Masukkan produksi atau pemakaian pakan.</small>
+        </span>
+        <span class="action-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'stock:adjustment' %}" class="action-card">
+        <span class="action-icon action-icon-blue" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+        </span>
+        <span class="action-copy">
+          <strong>Sesuaikan stok</strong>
+          <small>Koreksi jumlah dengan alasan yang tercatat.</small>
+        </span>
+        <span class="action-arrow" aria-hidden="true">→</span>
+      </a>
     </div>
   </section>
 
-  <section class="mt-6">
-    <div class="card flex flex-col items-start gap-2">
-      <span class="badge">Fondasi</span>
-      <h2 class="text-lg font-semibold text-slate-900">Aplikasi siap dikembangkan</h2>
-      <p class="text-sm text-slate-600">
-        Autentikasi, layout responsif, dan pipeline aset sudah berjalan. Modul transaksi,
-        stok, dan rekap akan diisi pada tahap berikutnya.
-      </p>
+  <section class="dashboard-section" aria-labelledby="overview-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">PINTASAN</p>
+        <h2 id="overview-title">Lihat dan kelola</h2>
+      </div>
+    </div>
+    <div class="dashboard-links">
+      <a href="{% url 'transaction_list' %}">
+        <span><strong>Daftar transaksi</strong><small>Telusuri, filter, dan periksa catatan transaksi.</small></span>
+        <span aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'reports:monthly_recap' %}">
+        <span><strong>Rekap keuangan</strong><small>Buka ringkasan bulanan dan ekspor laporan.</small></span>
+        <span aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'stock:daily' %}">
+        <span><strong>Persediaan</strong><small>Lihat posisi stok dan riwayat pergerakannya.</small></span>
+        <span aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'audit:list' %}">
+        <span><strong>Riwayat aktivitas</strong><small>Periksa perubahan yang tercatat di aplikasi.</small></span>
+        <span aria-hidden="true">→</span>
+      </a>
     </div>
   </section>
 </div>

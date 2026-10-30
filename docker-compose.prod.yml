@@ -43,7 +43,8 @@ services:
       retries: 3
     networks:
       - telur-network
-      - postgres-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   caddy:
     image: caddy:2-alpine
@@ -73,6 +74,3 @@ volumes:
 networks:
   telur-network:
     driver: bridge
-  postgres-network:
-    name: ${POSTGRES_NETWORK:?Set POSTGRES_NETWORK to the existing PostgreSQL Docker network}
-    external: true

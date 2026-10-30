@@ -23,6 +23,55 @@ docker compose run --rm app python manage.py createsuperuser
 
 Health check: `curl http://localhost:8000/healthz` → `{"status":"ok","db":"ok"}`.
 
+## Deploy ke Ubuntu dengan PostgreSQL native
+
+Compose produksi tidak membuat container PostgreSQL. Django berjalan di Docker
+dan terhubung ke PostgreSQL yang terpasang langsung di host Ubuntu melalui
+`host.docker.internal`. Pastikan PostgreSQL memiliki database `financejnj` dan
+user `financeuser` dengan hak akses yang sesuai.
+
+Salin template lalu atur domain, password user PostgreSQL yang sebenarnya, dan
+secret Django acak di server:
+
+```bash
+cp .env.production.example .env
+openssl rand -base64 48  # isi DJANGO_SECRET_KEY dengan hasilnya
+chmod 600 .env
+nano .env
+```
+
+Compose menambahkan alias host Docker untuk `host.docker.internal`. PostgreSQL
+native biasanya hanya listen di localhost, jadi atur `listen_addresses` agar
+menerima koneksi dari gateway Docker, lalu tambahkan aturan `pg_hba.conf` untuk
+subnet network Compose. Ambil gateway Docker default dan subnet Compose dengan:
+
+```bash
+docker network inspect bridge \
+  --format '{{(index .IPAM.Config 0).Gateway}}'
+docker network inspect telur-finance_telur-network \
+  --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+```
+
+Jangan membuka port 5432 ke internet. Batasi `pg_hba.conf` dan firewall hanya
+untuk subnet Docker yang diperlukan. Jika memakai UFW, jangan menambahkan aturan
+yang mengizinkan port 5432 dari semua alamat. Setelah mengubah konfigurasi
+PostgreSQL, restart service PostgreSQL. Atur domain pada
+`DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, dan `Caddyfile`.
+
+Password database yang pernah dibagikan sebaiknya diganti sebelum deploy; jangan
+simpan password asli di Git. `POSTGRES_PASSWORD` di `.env` harus cocok dengan
+password user PostgreSQL yang aktif.
+
+Jalankan service aplikasi dan Caddy tanpa membuat/menghapus PostgreSQL:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env -f docker-compose.prod.yml ps
+docker compose --env-file .env -f docker-compose.prod.yml logs -f app
+```
+
+PostgreSQL dikelola oleh Ubuntu, terpisah dari Compose ini.
+
 ## Perintah umum
 
 ```bash
