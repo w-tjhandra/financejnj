@@ -1,59 +1,103 @@
-{% comment %}Navigasi utama. Satu daftar, tampil vertikal di desktop dan horizontal di HP.{% endcomment %}
-<nav class="border-b border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-60 lg:border-b-0 lg:border-r" aria-label="Navigasi utama">
-  <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 lg:h-full lg:flex-col lg:items-stretch lg:justify-start lg:p-3">
-    <a href="{% url 'dashboard' %}" class="flex min-h-11 items-center gap-2 text-base font-semibold text-emerald-800">
-      <span aria-hidden="true" class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-emerald-700 text-sm font-bold text-white">TF</span>
-      <span class="min-w-0 truncate">{{ company_name|default:"Telur Finance" }}</span>
+{% comment %}Navigasi utama aplikasi.{% endcomment %}
+<div class="sidebar-backdrop"
+     x-cloak
+     x-show="sidebarOpen"
+     x-transition.opacity
+     @click="sidebarOpen = false"
+     aria-hidden="true"></div>
+
+<aside id="app-navigation" class="sidebar-panel" :class="{ 'is-open': sidebarOpen }" aria-label="Navigasi aplikasi">
+  <div class="sidebar-brand">
+    <a href="{% url 'dashboard' %}" class="brand-link">
+      <span class="brand-mark" aria-hidden="true">TF</span>
+      <span class="brand-copy">
+        <strong>{{ company_name|default:"Telur Finance" }}</strong>
+        <small>OPERASIONAL TERNAK</small>
+      </span>
+    </a>
+    <button type="button" class="sidebar-close" @click="sidebarOpen = false" aria-label="Tutup menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Navigasi utama">
+    <p class="nav-caption">Ruang kerja</p>
+    <a href="{% url 'dashboard' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'dashboard' and not request.resolver_match.namespace %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4" rx="1.5"/><rect x="13.5" y="10.5" width="7" height="10" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+      <span>Dashboard</span>
     </a>
 
-    <ul class="flex items-center gap-1 overflow-x-auto lg:mt-4 lg:flex-col lg:items-stretch lg:gap-1">
-      <li>
-        <a href="{% url 'dashboard' %}" class="nav-link" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
-          Dashboard
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'master:category_list' %}" class="nav-link" {% if request.resolver_match.url_name == 'category_list' or request.resolver_match.url_name == 'category_update' %}aria-current="page"{% endif %}>
-          Kategori
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'master:item_list' %}" class="nav-link" {% if request.resolver_match.url_name == 'item_list' or request.resolver_match.url_name == 'item_update' %}aria-current="page"{% endif %}>
-          Item
-        </a>
-      </li>
-    </ul>
+    <p class="nav-caption">Keuangan</p>
+    <a href="{% url 'transaction_list' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'ledger' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+      <span>Transaksi</span>
+    </a>
+    <a href="{% url 'opening_balance' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'opening_balance' or request.resolver_match.url_name == 'opening_correction' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.5c0-1.2-1.3-2-3-2s-3 .8-3 2 1.3 2 3 2 3 .8 3 2-1.3 2-3 2-3-.8-3-2"/></svg>
+      <span>Saldo awal</span>
+    </a>
+    <p class="nav-caption">Persediaan</p>
+    <a href="{% url 'stock:daily' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'stock' and request.resolver_match.url_name == 'daily' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 12v9"/></svg>
+      <span>Stok harian</span>
+    </a>
+    <a href="{% url 'stock:adjustment' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'stock' and request.resolver_match.url_name == 'adjustment' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      <span>Penyesuaian stok</span>
+    </a>
+    <a href="{% url 'stock:settings' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'stock' and request.resolver_match.url_name == 'settings' or request.resolver_match.namespace == 'stock' and request.resolver_match.url_name == 'update' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
+      <span>Pengaturan stok</span>
+    </a>
 
-    <p class="hidden px-3 pt-4 text-xs font-semibold uppercase tracking-wide text-slate-400 lg:block">Pengaturan</p>
-    <ul class="flex items-center gap-1 overflow-x-auto lg:flex-col lg:items-stretch lg:gap-1">
-      <li>
-        <a href="{% url 'stock:settings' %}" class="nav-link" {% if request.resolver_match.url_name == 'stock_settings' or request.resolver_match.url_name == 'stock_update' %}aria-current="page"{% endif %}>
-          Stok
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'opening_balance' %}" class="nav-link" {% if request.resolver_match.url_name == 'opening_balance' or request.resolver_match.url_name == 'opening_correction' %}aria-current="page"{% endif %}>
-          Saldo awal
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'profile' %}" class="nav-link" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
-          Profil usaha
-        </a>
-      </li>
-      <li>
-        <a href="{% url 'account_settings' %}" class="nav-link" {% if request.resolver_match.url_name == 'account_settings' %}aria-current="page"{% endif %}>
-          Akun
-        </a>
-      </li>
-    </ul>
+    <p class="nav-caption">Analisis</p>
+    <a href="{% url 'reports:daily_recap' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'reports' and request.resolver_match.url_name == 'daily_recap' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg>
+      <span>Rekap harian</span>
+    </a>
+    <a href="{% url 'reports:weekly_recap' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'reports' and request.resolver_match.url_name == 'weekly_recap' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4m8-4v4M3.5 10h17M8 14h2m4 0h2"/></svg>
+      <span>Rekap mingguan</span>
+    </a>
+    <a href="{% url 'reports:monthly_recap' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'reports' and request.resolver_match.url_name == 'monthly_recap' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><path d="M8 3v3m8-3v3M3.5 9h17M8 13h2m4 0h2m-8 4h2"/></svg>
+      <span>Rekap bulanan</span>
+    </a>
+    <a href="{% url 'reports:yearly_recap' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'reports' and request.resolver_match.url_name == 'yearly_recap' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16"/><path d="M8 16v-4m4 4V8m4 8v-6"/></svg>
+      <span>Rekap tahunan</span>
+    </a>
 
-    <div class="flex items-center gap-2 lg:mt-auto lg:flex-col lg:items-stretch lg:border-t lg:border-slate-200 lg:pt-3">
-      <span class="hidden px-3 text-sm text-slate-500 lg:block">{{ user.get_full_name|default:user.username }}</span>
-      <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="nav-link w-full text-left">Keluar</button>
-      </form>
+    <p class="nav-caption">Pengelolaan</p>
+    <a href="{% url 'master:item_list' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'master' and request.resolver_match.url_name == 'item_list' or request.resolver_match.namespace == 'master' and request.resolver_match.url_name == 'item_update' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5 12 3l8 3.5v11L12 21l-8-3.5v-11Z"/><path d="m4.5 6.8 7.5 3.4 7.5-3.4M12 10.2V21"/></svg>
+      <span>Item transaksi</span>
+    </a>
+    <a href="{% url 'master:category_list' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'master' and request.resolver_match.url_name == 'category_list' or request.resolver_match.namespace == 'master' and request.resolver_match.url_name == 'category_update' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h10M4 19h16"/><circle cx="18" cy="12" r="2"/></svg>
+      <span>Kategori</span>
+    </a>
+    <a href="{% url 'profile' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-1a7 7 0 0 1 14 0v1M11 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-7a4 4 0 0 1 0 7m2 3a6 6 0 0 1 3 5v1"/></svg>
+      <span>Profil usaha</span>
+    </a>
+    <a href="{% url 'account_settings' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'account_settings' %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2.9-1.2 2.1-1.4-.5a7 7 0 0 1-1.3.8l-.2 1.5h-2.4l-.3-1.5a7 7 0 0 1-1.3-.8l-1.4.5-1.2-2.1 1.2-.9a7 7 0 0 1 0-1.6l-1.2-.9 1.2-2.1 1.4.5a7 7 0 0 1 1.3-.8l.3-1.5h2.4l.2 1.5a7 7 0 0 1 1.3.8l1.4-.5 1.2 2.1-1.2.9a7 7 0 0 1-.1 1.6Z"/></svg>
+      <span>Akun</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-avatar" aria-hidden="true">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</div>
+    <div class="user-copy">
+      <strong>{{ user.get_full_name|default:user.username }}</strong>
+      <small>Pemilik usaha</small>
     </div>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="logout-button" aria-label="Keluar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
+      </button>
+    </form>
   </div>
-</nav>
+</aside>

@@ -1,51 +1,118 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Dashboard · Telur Finance{% endblock %}
+{% block title %}Dashboard · {{ company_name|default:"Telur Finance" }}{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard.js' %}" defer></script>
+{% endblock %}
 
 {% block content %}
-<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-  <header class="mb-6">
-    <h1 class="text-2xl font-semibold text-slate-900">Dashboard</h1>
-    <p class="mt-1 text-sm text-slate-600">Ringkasan keuangan dan stok peternakan.</p>
+<div class="workspace-page">
+  <header class="page-heading">
+    <div>
+      <h1>Dashboard</h1>
+    </div>
   </header>
 
-  <section aria-labelledby="kpi-heading" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <h2 id="kpi-heading" class="sr-only">Ringkasan utama</h2>
-
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Saldo kas</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+  <section class="dashboard-section" aria-labelledby="summary-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="summary-title">{{ dashboard_month_label }}</h2>
+      </div>
+      <a href="{% url 'reports:monthly_recap' %}" class="dashboard-section-link">Lihat rekap →</a>
     </div>
-
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Pemasukan bulan ini</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-emerald-700">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
+    <div class="dashboard-summary">
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Pemasukan</span>
+        <strong class="dashboard-stat-value is-income">Rp {{ dashboard_income_display }}</strong>
+        <span class="dashboard-stat-note">Bulan ini</span>
+      </article>
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Pengeluaran</span>
+        <strong class="dashboard-stat-value is-expense">Rp {{ dashboard_expense_display }}</strong>
+        <span class="dashboard-stat-note">Bulan ini</span>
+      </article>
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Selisih</span>
+        <strong class="dashboard-stat-value{% if dashboard_net < 0 %} is-expense{% else %} is-income{% endif %}">
+          Rp {{ dashboard_net_display }}
+        </strong>
+        <span class="dashboard-stat-note">Pemasukan dikurangi pengeluaran</span>
+      </article>
     </div>
+  </section>
 
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Pengeluaran bulan ini</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-red-700">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data transaksi</p>
-    </div>
+  {{ cashflow_chart|json_script:"dashboard-cashflow-data" }}
+  {{ category_chart|json_script:"dashboard-category-data" }}
 
-    <div class="card">
-      <p class="text-sm font-medium text-slate-500">Stok telur</p>
-      <p class="mt-2 text-2xl font-semibold tabular-nums text-slate-900">—</p>
-      <p class="mt-1 text-xs text-slate-500">Menunggu data stok</p>
+  <section class="dashboard-section" aria-label="Grafik keuangan">
+    <div class="dashboard-chart-grid">
+      <article class="dashboard-chart-card">
+        <div class="dashboard-chart-heading">
+          <div>
+            <h2>Arus kas</h2>
+            <p>Harian · {{ dashboard_month_label }}</p>
+          </div>
+        </div>
+        <div class="dashboard-chart-wrap">
+          <canvas id="dashboard-cashflow-chart" role="img" aria-label="Grafik pemasukan dan pengeluaran harian"></canvas>
+        </div>
+      </article>
+      <article class="dashboard-chart-card">
+        <div class="dashboard-chart-heading">
+          <div>
+            <h2>Pengeluaran</h2>
+            <p>Kategori terbesar bulan ini</p>
+          </div>
+        </div>
+        {% if expense_category_count %}
+          <div class="dashboard-chart-wrap">
+            <canvas id="dashboard-category-chart" role="img" aria-label="Grafik pengeluaran per kategori"></canvas>
+          </div>
+        {% else %}
+          <div class="dashboard-chart-empty">Belum ada pengeluaran bulan ini.</div>
+        {% endif %}
+      </article>
     </div>
   </section>
 
-  <section class="mt-6">
-    <div class="card flex flex-col items-start gap-2">
-      <span class="badge">Fondasi</span>
-      <h2 class="text-lg font-semibold text-slate-900">Aplikasi siap dikembangkan</h2>
-      <p class="text-sm text-slate-600">
-        Autentikasi, layout responsif, dan pipeline aset sudah berjalan. Modul transaksi,
-        stok, dan rekap akan diisi pada tahap berikutnya.
-      </p>
+  <section class="dashboard-section" aria-labelledby="actions-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="actions-title">Aksi cepat</h2>
+      </div>
+    </div>
+    <div class="action-grid">
+      <a href="{% url 'transaction_create' %}" class="action-card">
+        <span class="action-icon action-icon-green" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8m-8 4h5m5 5v-4m-2 2h4"/></svg>
+        </span>
+        <span class="action-copy">
+          <strong>Transaksi</strong>
+        </span>
+        <span class="action-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'stock:daily' %}" class="action-card">
+        <span class="action-icon action-icon-amber" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 12v9"/></svg>
+        </span>
+        <span class="action-copy">
+          <strong>Stok harian</strong>
+        </span>
+        <span class="action-arrow" aria-hidden="true">→</span>
+      </a>
+      <a href="{% url 'stock:adjustment' %}" class="action-card">
+        <span class="action-icon action-icon-blue" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+        </span>
+        <span class="action-copy">
+          <strong>Penyesuaian stok</strong>
+        </span>
+        <span class="action-arrow" aria-hidden="true">→</span>
+      </a>
     </div>
   </section>
+
 </div>
 {% endblock %}

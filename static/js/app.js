@@ -25,7 +25,7 @@
     window.Alpine.store("toasts").push(message, 4000);
   });
 
-  document.addEventListener("alpine:init", function () {
+  function registerToastStore() {
     window.Alpine.store("toasts", {
       items: [],
       push: function (message, timeout) {
@@ -42,5 +42,11 @@
         this.items = [];
       },
     });
-  });
+  }
+
+  if (window.Alpine) {
+    registerToastStore();
+  } else {
+    document.addEventListener("alpine:init", registerToastStore, { once: true });
+  }
 })();

@@ -6,19 +6,39 @@
   <meta name="color-scheme" content="light">
   <title>{% block title %}Telur Finance{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/ui-refresh.css' %}">
   <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
   <script src="{% static 'vendor/alpine-3.14.9.min.js' %}" defer></script>
   <script src="{% static 'vendor/chart-4.4.7.umd.min.js' %}" defer></script>
-  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block extra_scripts %}{% endblock %}
 </head>
-<body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <a href="#main" class="sr-only rounded-lg bg-white px-4 py-2 text-sm font-semibold text-emerald-800 ring-1 ring-slate-300 focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50">Lewati ke konten</a>
+<body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      {% if user.is_authenticated and not setup_wizard %}x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false"{% endif %}>
+  <a href="#main" class="skip-link">Lewati ke konten</a>
 
   {% if user.is_authenticated and not setup_wizard %}
     {% include "partials/nav.html" %}
   {% endif %}
 
-  <main id="main" class="{% if user.is_authenticated and not setup_wizard %}lg:pl-60{% endif %}">
+  <main id="main" class="app-main{% if user.is_authenticated and not setup_wizard %} has-sidebar{% endif %}">
+    {% if user.is_authenticated and not setup_wizard %}
+      <header class="topbar">
+        <div class="topbar-leading">
+          <button type="button" class="menu-toggle" @click="sidebarOpen = true" aria-label="Buka menu" aria-controls="app-navigation">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div class="topbar-context">
+            <span class="topbar-overline">TELUR FINANCE</span>
+            <span class="topbar-title">{{ company_name|default:"Ruang kerja" }}</span>
+          </div>
+        </div>
+        <a href="{% url 'transaction_create' %}" class="topbar-action">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg>
+          <span>Transaksi baru</span>
+        </a>
+      </header>
+    {% endif %}
     {% if messages %}
       <div class="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6" role="status" aria-live="polite">
         {% for message in messages %}

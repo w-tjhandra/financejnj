@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Penyesuaian Stok · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:py-8">
+  <header class="mb-5">
+    <h1 class="text-2xl font-semibold text-slate-900">Penyesuaian stok</h1>
+  </header>
+
+  <form method="post" class="card stock-adjustment-form">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
+        {{ form.non_field_errors|join:" " }}
+      </div>
+    {% endif %}
+
+    <div class="stock-adjustment-fields">
+      <div class="stock-adjustment-field">
+        <label for="{{ form.stock_item.id_for_label }}" class="label">{{ form.stock_item.label }}</label>
+        {{ form.stock_item }}
+        {% if form.stock_item.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.stock_item.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+      <div class="stock-adjustment-field">
+        <label for="{{ form.qty.id_for_label }}" class="label">{{ form.qty.label }}</label>
+        {{ form.qty }}
+        <p class="stock-adjustment-hint">Positif menambah, negatif mengurangi.</p>
+        {% if form.qty.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.qty.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+      <div class="stock-adjustment-field">
+        <label for="{{ form.date.id_for_label }}" class="label">{{ form.date.label }}</label>
+        {{ form.date }}
+        {% if form.date.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.date.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stock-adjustment-reason">
+      <label for="{{ form.reason.id_for_label }}" class="label">Alasan <span class="font-normal text-slate-400">(min. 10 karakter)</span></label>
+      {{ form.reason }}
+      {% if form.reason.errors %}
+        <p role="alert" class="mt-1 text-sm text-red-700">{{ form.reason.errors|join:" " }}</p>
+      {% endif %}
+    </div>
+
+    <div class="stock-adjustment-actions">
+      <button type="submit" class="btn">Simpan penyesuaian</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

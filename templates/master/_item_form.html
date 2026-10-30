@@ -80,10 +80,6 @@
       <p role="alert" class="mt-1 text-sm text-red-700">{{ form.has_stock.errors|join:" " }}</p>
     {% elif form.has_stock.help_text %}
       <p class="mt-1 text-xs text-amber-800">{{ form.has_stock.help_text }}</p>
-    {% else %}
-      <p class="mt-1 text-xs text-slate-500">
-        Item pemasukan dengan stok mengurangi stok (keluar); item pengeluaran dengan stok menambah stok (masuk).
-      </p>
     {% endif %}
 
     <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -119,8 +115,6 @@
                x-model="unit" x-bind:readonly="hasStock">
         {% if form.unit.errors %}
           <p role="alert" class="mt-1 text-sm text-red-700">{{ form.unit.errors|join:" " }}</p>
-        {% else %}
-          <p class="mt-1 text-xs text-slate-500">Qty item tanpa stok bersifat informasional.</p>
         {% endif %}
       </div>
     </div>

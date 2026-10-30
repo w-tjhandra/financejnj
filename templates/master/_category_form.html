@@ -30,8 +30,6 @@
       {{ form.code }}
       {% if form.code.errors %}
         <p role="alert" class="mt-1 text-sm text-red-700">{{ form.code.errors|join:" " }}</p>
-      {% elif form.code.help_text %}
-        <p class="mt-1 text-xs text-slate-500">{{ form.code.help_text }}</p>
       {% endif %}
     </div>
 
@@ -48,8 +46,6 @@
       {{ form.parent }}
       {% if form.parent.errors %}
         <p role="alert" class="mt-1 text-sm text-red-700">{{ form.parent.errors|join:" " }}</p>
-      {% else %}
-        <p class="mt-1 text-xs text-slate-500">Maksimal satu tingkat. Induk harus kategori tanpa induk.</p>
       {% endif %}
     </div>
 

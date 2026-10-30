@@ -62,8 +62,7 @@
                 <form method="post" action="{% url 'master:item_deactivate' item.pk %}"
                       hx-post="{% url 'master:item_deactivate' item.pk %}"
                       hx-target="#item-panel" hx-swap="outerHTML"
-                      hx-confirm="Nonaktifkan item ini?"
-                      onsubmit="return confirm('Nonaktifkan item ini?')">
+                      hx-confirm="Nonaktifkan item ini?">
                   {% csrf_token %}
                   <button type="submit" class="text-sm font-medium text-amber-800 hover:underline">Nonaktifkan</button>
                 </form>
@@ -79,8 +78,7 @@
               <form method="post" action="{% url 'master:item_delete' item.pk %}"
                     hx-post="{% url 'master:item_delete' item.pk %}"
                     hx-target="#item-panel" hx-swap="outerHTML"
-                    hx-confirm="Hapus item ini? Tindakan ini tidak bisa dibatalkan."
-                    onsubmit="return confirm('Hapus item ini? Tindakan ini tidak bisa dibatalkan.')">
+                    hx-confirm="Hapus item ini? Tindakan ini tidak bisa dibatalkan.">
                 {% csrf_token %}
                 <button type="submit" class="text-sm font-medium text-red-700 hover:underline">Hapus</button>
               </form>
