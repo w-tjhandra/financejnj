@@ -3,6 +3,10 @@
 
 {% block title %}Dashboard · {{ company_name|default:"Telur Finance" }}{% endblock %}
 
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard.js' %}" defer></script>
+{% endblock %}
+
 {% block content %}
 <div class="workspace-page">
   <header class="page-heading">
@@ -23,6 +27,69 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg>
       Catat transaksi
     </a>
+  </section>
+
+  <section class="dashboard-section" aria-labelledby="summary-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">RINGKASAN</p>
+        <h2 id="summary-title">{{ dashboard_month_label }}</h2>
+      </div>
+      <a href="{% url 'reports:monthly_recap' %}" class="dashboard-section-link">Lihat rekap →</a>
+    </div>
+    <div class="dashboard-summary">
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Pemasukan</span>
+        <strong class="dashboard-stat-value is-income">Rp {{ dashboard_income_display }}</strong>
+        <span class="dashboard-stat-note">Bulan ini</span>
+      </article>
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Pengeluaran</span>
+        <strong class="dashboard-stat-value is-expense">Rp {{ dashboard_expense_display }}</strong>
+        <span class="dashboard-stat-note">Bulan ini</span>
+      </article>
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Selisih</span>
+        <strong class="dashboard-stat-value{% if dashboard_net < 0 %} is-expense{% else %} is-income{% endif %}">
+          Rp {{ dashboard_net_display }}
+        </strong>
+        <span class="dashboard-stat-note">Pemasukan dikurangi pengeluaran</span>
+      </article>
+    </div>
+  </section>
+
+  {{ cashflow_chart|json_script:"dashboard-cashflow-data" }}
+  {{ category_chart|json_script:"dashboard-category-data" }}
+
+  <section class="dashboard-section" aria-label="Grafik keuangan">
+    <div class="dashboard-chart-grid">
+      <article class="dashboard-chart-card">
+        <div class="dashboard-chart-heading">
+          <div>
+            <h2>Arus kas</h2>
+            <p>Harian · {{ dashboard_month_label }}</p>
+          </div>
+        </div>
+        <div class="dashboard-chart-wrap">
+          <canvas id="dashboard-cashflow-chart" role="img" aria-label="Grafik pemasukan dan pengeluaran harian"></canvas>
+        </div>
+      </article>
+      <article class="dashboard-chart-card">
+        <div class="dashboard-chart-heading">
+          <div>
+            <h2>Pengeluaran</h2>
+            <p>Kategori terbesar bulan ini</p>
+          </div>
+        </div>
+        {% if expense_category_count %}
+          <div class="dashboard-chart-wrap">
+            <canvas id="dashboard-category-chart" role="img" aria-label="Grafik pengeluaran per kategori"></canvas>
+          </div>
+        {% else %}
+          <div class="dashboard-chart-empty">Belum ada pengeluaran bulan ini.</div>
+        {% endif %}
+      </article>
+    </div>
   </section>
 
   <section class="dashboard-section" aria-labelledby="actions-title">
@@ -89,43 +156,6 @@
       <a href="{% url 'audit:list' %}">
         <span><strong>Riwayat aktivitas</strong><small>Periksa perubahan yang tercatat di aplikasi.</small></span>
         <span aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
-
-  <section class="dashboard-section" aria-labelledby="actions-title">
-    <div class="section-heading">
-      <div>
-        <h2 id="actions-title">Aksi cepat</h2>
-      </div>
-    </div>
-    <div class="action-grid">
-      <a href="{% url 'transaction_create' %}" class="action-card">
-        <span class="action-icon action-icon-green" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8m-8 4h5m5 5v-4m-2 2h4"/></svg>
-        </span>
-        <span class="action-copy">
-          <strong>Transaksi</strong>
-        </span>
-        <span class="action-arrow" aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'stock:daily' %}" class="action-card">
-        <span class="action-icon action-icon-amber" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 12v9"/></svg>
-        </span>
-        <span class="action-copy">
-          <strong>Stok harian</strong>
-        </span>
-        <span class="action-arrow" aria-hidden="true">→</span>
-      </a>
-      <a href="{% url 'stock:adjustment' %}" class="action-card">
-        <span class="action-icon action-icon-blue" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
-        </span>
-        <span class="action-copy">
-          <strong>Penyesuaian stok</strong>
-        </span>
-        <span class="action-arrow" aria-hidden="true">→</span>
       </a>
     </div>
   </section>

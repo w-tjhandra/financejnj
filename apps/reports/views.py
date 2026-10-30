@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from io import BytesIO
 
 from django.contrib.auth.decorators import login_required
@@ -15,8 +16,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from core.utils.dates import month_start, today_wib
+from core.utils.dates import format_month_id, month_start, today_wib
+from core.utils.numbers import format_money
 from core.utils.periods import week
+from ledger.models import Account, Transaction
 from master.models import Category
 from reports.queries import daily_recap, monthly_recap, weekly_recap, yearly_recap
 
@@ -90,7 +93,62 @@ def _auto_width(ws, min_width=10, max_width=40):
 @require_GET
 def dashboard(request: HttpRequest) -> HttpResponse:
     """S-10…S-13: Halaman dashboard ringkasan."""
-    return render(request, "reports/dashboard.html")
+    today = today_wib()
+    month = month_start(today)
+    account = Account.current()
+    reporting_start = max(month, account.opening_balance_date) if account else month
+    transactions = Transaction.objects.filter(
+        date__gte=reporting_start,
+        date__lte=today,
+        is_opening_correction=False,
+    )
+    totals = transactions.aggregate(
+        income=Sum("amount", filter=Q(flow="income")),
+        expense=Sum("amount", filter=Q(flow="expense")),
+    )
+    income = totals["income"] or Decimal("0")
+    expense = totals["expense"] or Decimal("0")
+    daily_totals = {
+        row["day"].day: row
+        for row in transactions.annotate(day=TruncDate("date"))
+        .values("day")
+        .annotate(
+            income=Sum("amount", filter=Q(flow="income")),
+            expense=Sum("amount", filter=Q(flow="expense")),
+        )
+        .order_by("day")
+    }
+    expense_categories = list(
+        transactions.filter(flow="expense")
+        .values("category__name")
+        .annotate(amount=Sum("amount"))
+        .order_by("-amount", "category__name")[:5]
+    )
+    days = range(1, today.day + 1)
+    cashflow_chart = {
+        "labels": [f"{day:02}" for day in days],
+        "income": [float(daily_totals.get(day, {}).get("income") or 0) for day in days],
+        "expense": [float(daily_totals.get(day, {}).get("expense") or 0) for day in days],
+    }
+    category_chart = {
+        "labels": [row["category__name"] for row in expense_categories],
+        "values": [float(row["amount"]) for row in expense_categories],
+    }
+    return render(
+        request,
+        "reports/dashboard.html",
+        {
+            "dashboard_month_label": format_month_id(month),
+            "dashboard_income_display": format_money(income),
+            "dashboard_expense_display": format_money(expense),
+            "dashboard_net_display": format_money(income - expense),
+            "dashboard_income": income,
+            "dashboard_net": income - expense,
+            "cashflow_chart": cashflow_chart,
+            "category_chart": category_chart,
+            "expense_category_count": len(expense_categories),
+        },
+    )
 
 
 def _category_id(request: HttpRequest) -> int | None:
