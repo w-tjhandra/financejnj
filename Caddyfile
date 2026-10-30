@@ -1,0 +1,46 @@
+# Telur Finance Production Caddyfile
+# Replace telur-finance.example.com with your actual domain
+
+telur-finance.example.com {
+    # Enable automatic HTTPS via Let's Encrypt
+    tls admin@example.com
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Compress responses
+    encode gzip zstd
+
+    # Static files (served by Caddy for performance)
+    @static {
+        path /static/*
+        path /media/*
+    }
+    root * /static
+    file_server @static
+
+    # Proxy to Django app
+    reverse_proxy app:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Health check endpoint (no auth)
+    @health path /healthz
+    handle @health {
+        respond "OK" 200
+    }
+}
+
+# Redirect www to non-www (optional)
+www.telur-finance.example.com {
+    redir https://telur-finance.example.com{uri} permanent
+}

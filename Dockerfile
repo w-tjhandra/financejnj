@@ -73,3 +73,20 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+
+# ---------------------------------------------------------------------------
+# Production target
+# ---------------------------------------------------------------------------
+FROM runtime AS production
+
+ENV DJANGO_SETTINGS_MODULE=config.settings.production
+
+COPY --chown=app:app . .
+
+# Collect static files
+RUN python manage.py collectstatic --noinput --clear \
+ && chown -R app:app /app
+
+# Production command
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "2", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-"]

@@ -821,8 +821,8 @@ def attachment_download(request: HttpRequest, pk: int, att_pk: int) -> HttpRespo
 def investor_pdf(request: HttpRequest) -> HttpResponse:
     """Generate PDF laporan investor (ID/EN) via WeasyPrint."""
 
+    from core.models import CompanyProfile
     from core.utils.dates import format_date_long_id, today_wib
-    from master.models import CompanyProfile
 
     # Parse parameters
     lang = request.GET.get("lang", "id")

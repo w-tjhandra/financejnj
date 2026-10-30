@@ -246,7 +246,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     ws2.merge_cells("A1:C1")
     _write_header_row(ws2, 2, ["Tanggal", "Item", "Jumlah"])
     row = 3
-    for detail in result.income_detail:
+    for detail in [d for d in result.detail if d.get("flow") == "income"]:
         ws2.cell(row=row, column=1, value=detail.date.strftime("%d/%m/%Y"))
         ws2.cell(row=row, column=2, value=detail.item_name)
         cell_v = ws2.cell(row=row, column=3, value=detail.amount)
@@ -262,7 +262,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     ws3.merge_cells("A1:C1")
     _write_header_row(ws3, 2, ["Tanggal", "Item", "Jumlah"])
     row = 3
-    for detail in result.expense_detail:
+    for detail in [d for d in result.detail if d.get("flow") == "expense"]:
         ws3.cell(row=row, column=1, value=detail.date.strftime("%d/%m/%Y"))
         ws3.cell(row=row, column=2, value=detail.item_name)
         cell_v = ws3.cell(row=row, column=3, value=detail.amount)
@@ -301,7 +301,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     ws5.merge_cells("A1:G1")
     _write_header_row(ws5, 2, ["Tanggal", "Kategori", "Item", "Jenis", "Jumlah", "Qty", "Satuan"])
     row = 3
-    for detail in result.income_detail + result.expense_detail:
+    for detail in result.detail:
         ws5.cell(row=row, column=1, value=detail.date.strftime("%d/%m/%Y"))
         ws5.cell(row=row, column=2, value=detail.category_name)
         ws5.cell(row=row, column=3, value=detail.item_name)
