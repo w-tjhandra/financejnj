@@ -73,7 +73,8 @@ password user PostgreSQL yang aktif.
 Jalankan script deploy. Pada checkout Git, script menarik branch `main`; pada
 folder source yang diunggah/manual, script memakai file yang sudah ada tanpa
 `git pull`. Script membuat backup database, membangun aplikasi, lalu
-menyalakan Django dan Caddy tanpa membuat/menghapus PostgreSQL:
+menyesuaikan ownership volume static/media, lalu menyalakan Django dan Caddy
+tanpa membuat/menghapus PostgreSQL:
 
 ```bash
 ./deploy.sh
