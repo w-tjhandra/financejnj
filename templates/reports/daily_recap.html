@@ -6,11 +6,16 @@
 
 {% block content %}
 <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-  <header class="mb-6">
-    <h1 class="text-2xl font-semibold text-slate-900">Rekap Harian</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      Empat baris ringkasan dan detail per item untuk {{ result.period_label }}.
-    </p>
+  <header class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Rekap Harian</h1>
+      <p class="mt-1 text-sm text-slate-600">
+        Empat baris ringkasan dan detail per item untuk {{ result.period_label }}.
+      </p>
+    </div>
+    <a href="{% url 'reports:export_daily' %}?date_from={{ date_from }}&date_to={{ date_to }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary">
+      Export XLSX
+    </a>
   </header>
 
   <form method="get" class="card mb-6">
