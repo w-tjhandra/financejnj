@@ -70,9 +70,10 @@ Password database yang pernah dibagikan sebaiknya diganti sebelum deploy; jangan
 simpan password asli di Git. `POSTGRES_PASSWORD` di `.env` harus cocok dengan
 password user PostgreSQL yang aktif.
 
-Jalankan script deploy. Script menarik branch `main`, membuat backup database,
-membangun aplikasi, lalu menyalakan Django dan Caddy tanpa membuat/menghapus
-PostgreSQL:
+Jalankan script deploy. Pada checkout Git, script menarik branch `main`; pada
+folder source yang diunggah/manual, script memakai file yang sudah ada tanpa
+`git pull`. Script membuat backup database, membangun aplikasi, lalu
+menyalakan Django dan Caddy tanpa membuat/menghapus PostgreSQL:
 
 ```bash
 ./deploy.sh

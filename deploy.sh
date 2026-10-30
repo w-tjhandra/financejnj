@@ -18,7 +18,6 @@ read_env_value() {
 [[ -f "$COMPOSE_FILE" ]] || fail "docker-compose.prod.yml tidak ditemukan."
 command -v docker >/dev/null 2>&1 || fail "Docker belum terpasang."
 docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 belum tersedia."
-command -v git >/dev/null 2>&1 || fail "Git belum terpasang."
 
 for key in DJANGO_SECRET_KEY DJANGO_ALLOWED_HOSTS POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD POSTGRES_HOST; do
   value="$(read_env_value "$key")"
@@ -31,15 +30,21 @@ allowed_hosts="$(read_env_value DJANGO_ALLOWED_HOSTS)"
 [[ ${#secret_key} -ge 50 && "$secret_key" != REPLACE_* ]] || fail "DJANGO_SECRET_KEY harus berupa secret acak minimal 50 karakter."
 [[ "$allowed_hosts" != *"*"* ]] || fail "DJANGO_ALLOWED_HOSTS tidak boleh menggunakan wildcard (*)."
 
-cd "$ROOT_DIR"
-branch="$(git branch --show-current)"
-[[ "$branch" == main ]] || fail "branch aktif harus main, saat ini: ${branch:-detached HEAD}."
-if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
-  fail "worktree memiliki perubahan lokal. Commit atau simpan perubahan sebelum deploy."
+if [[ -e "$ROOT_DIR/.git" ]]; then
+  command -v git >/dev/null 2>&1 || fail "Git tidak tersedia untuk memperbarui checkout ini."
+  git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || fail "direktori .git ada tetapi checkout Git tidak valid."
+  branch="$(git -C "$ROOT_DIR" branch --show-current)"
+  [[ "$branch" == main ]] || fail "branch aktif harus main, saat ini: ${branch:-detached HEAD}."
+  if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=normal)" ]]; then
+    fail "worktree memiliki perubahan lokal. Commit atau simpan perubahan sebelum deploy."
+  fi
+  git -C "$ROOT_DIR" pull --ff-only origin main
+else
+  printf 'Direktori ini bukan checkout Git; deploy memakai source yang sudah ada (tanpa git pull).\n'
 fi
 
-git pull --ff-only origin main
-
+cd "$ROOT_DIR"
 compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 "${compose[@]}" config --quiet
 command -v pg_dump >/dev/null 2>&1 || fail "pg_dump belum terpasang; pasang postgresql-client untuk backup PostgreSQL host."
