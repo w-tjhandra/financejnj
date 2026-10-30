@@ -40,10 +40,18 @@ chmod 600 .env
 nano .env
 ```
 
+Pasang client PostgreSQL agar script dapat membuat backup sebelum deploy:
+
+```bash
+sudo apt install postgresql-client
+```
+
 Compose menambahkan alias host Docker untuk `host.docker.internal`. PostgreSQL
 native biasanya hanya listen di localhost, jadi atur `listen_addresses` agar
 menerima koneksi dari gateway Docker, lalu tambahkan aturan `pg_hba.conf` untuk
-subnet network Compose. Ambil gateway Docker default dan subnet Compose dengan:
+subnet network Compose. Script membuat backup dari host melalui
+`POSTGRES_BACKUP_HOST` (default `127.0.0.1`); sesuaikan jika PostgreSQL Anda
+mendengarkan di alamat lain. Ambil gateway Docker default dan subnet Compose:
 
 ```bash
 docker network inspect bridge \
@@ -62,10 +70,12 @@ Password database yang pernah dibagikan sebaiknya diganti sebelum deploy; jangan
 simpan password asli di Git. `POSTGRES_PASSWORD` di `.env` harus cocok dengan
 password user PostgreSQL yang aktif.
 
-Jalankan service aplikasi dan Caddy tanpa membuat/menghapus PostgreSQL:
+Jalankan script deploy. Script menarik branch `main`, membuat backup database,
+membangun aplikasi, lalu menyalakan Django dan Caddy tanpa membuat/menghapus
+PostgreSQL:
 
 ```bash
-docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+./deploy.sh
 docker compose --env-file .env -f docker-compose.prod.yml ps
 docker compose --env-file .env -f docker-compose.prod.yml logs -f app
 ```
