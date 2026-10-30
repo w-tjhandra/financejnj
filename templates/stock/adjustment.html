@@ -3,49 +3,46 @@
 {% block title %}Penyesuaian Stok · {{ company_name }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:py-8">
-  <header class="mb-6">
-    <h1 class="text-2xl font-semibold text-slate-900">Penyesuaian Stok</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      Koreksi saldo stok ke atas atau ke bawah. Alasan wajib minimal 10 karakter dan stok tidak boleh negatif.
-    </p>
+<div class="workspace-page stock-adjustment-page">
+  <header class="page-heading">
+    <div>
+      <h1>Penyesuaian Stok</h1>
+      <p class="page-description">Koreksi jumlah stok. Stok akhir tidak boleh negatif.</p>
+    </div>
   </header>
 
-  <form method="post" class="card">
+  <form method="post" class="card stock-adjustment-form">
     {% csrf_token %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-      <div>
+    <div class="stock-adjustment-fields">
+      <div class="stock-adjustment-field">
         <label for="{{ form.stock_item.id_for_label }}" class="label">{{ form.stock_item.label }}</label>
         {{ form.stock_item }}
+        {% if form.stock_item.errors %}<p class="stock-form-errors" role="alert">{{ form.stock_item.errors|join:" " }}</p>{% endif %}
       </div>
-      <div>
+      <div class="stock-adjustment-field">
         <label for="{{ form.qty.id_for_label }}" class="label">{{ form.qty.label }}</label>
         {{ form.qty }}
-        <p class="mt-1 text-xs text-slate-500">Contoh: ``2,500`` untuk menambah, ``-1,250`` untuk mengurangi.</p>
+        <p class="stock-adjustment-hint">Gunakan nilai minus untuk mengurangi stok.</p>
+        {% if form.qty.errors %}<p class="stock-form-errors" role="alert">{{ form.qty.errors|join:" " }}</p>{% endif %}
       </div>
-      <div>
+      <div class="stock-adjustment-field">
         <label for="{{ form.date.id_for_label }}" class="label">{{ form.date.label }}</label>
         {{ form.date }}
-      </div>
-      <div class="flex items-end">
-        <button type="submit" class="btn w-full">Simpan</button>
+        {% if form.date.errors %}<p class="stock-form-errors" role="alert">{{ form.date.errors|join:" " }}</p>{% endif %}
       </div>
     </div>
-    <div class="mt-4">
+    <div class="stock-adjustment-reason">
       <label for="{{ form.reason.id_for_label }}" class="label">{{ form.reason.label }}</label>
       {{ form.reason }}
-      <p class="mt-1 text-xs text-slate-500">Alasan dipakai jejak audit; minimal 10 karakter.</p>
+      <p class="stock-adjustment-hint">Alasan dicatat untuk jejak audit (minimal 10 karakter).</p>
+      {% if form.reason.errors %}<p class="stock-form-errors" role="alert">{{ form.reason.errors|join:" " }}</p>{% endif %}
     </div>
     {% if form.non_field_errors %}
-      <div class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
-        {{ form.non_field_errors|join:" " }}
-      </div>
+      <div class="stock-form-errors" role="alert">{{ form.non_field_errors|join:" " }}</div>
     {% endif %}
-    {% for field in form %}
-      {% if field.errors %}
-        <p class="mt-1 text-sm text-red-700">{{ field.errors|join:" " }}</p>
-      {% endif %}
-    {% endfor %}
+    <div class="stock-adjustment-actions">
+      <button type="submit" class="btn">Simpan penyesuaian</button>
+    </div>
   </form>
 </div>
 {% endblock %}

@@ -5,100 +5,92 @@
 {% block title %}Rekap Mingguan · {{ company_name }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-  <header class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+<div class="workspace-page report-page">
+  <header class="page-heading report-page-heading">
     <div>
-      <h1 class="text-2xl font-semibold text-slate-900">Rekap Mingguan</h1>
-      <p class="mt-1 text-sm text-slate-600">
-        Empat baris ringkasan dan detail per item untuk minggu {{ result.period_label }}.
-      </p>
+      <h1>Rekap Mingguan</h1>
+      <p class="page-description">{{ result.period_label }}</p>
     </div>
     <a href="{% url 'reports:export_weekly' %}?week={{ week }}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary">
-      Export XLSX
+      Ekspor Excel
     </a>
   </header>
 
-  <form method="get" class="card mb-6">
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-      <div>
-        <label for="id_week" class="label">Mulai Minggu (Senin)</label>
-        <input type="date" name="week" id="id_week" value="{{ week }}" class="input w-full" />
-        <p class="text-xs text-slate-500 mt-1">Pilih tanggal Senin.</p>
-      </div>
-      <div>
-        <label for="id_category" class="label">Kategori</label>
-        <select name="category" id="id_category" class="select w-full">
-          <option value="">Semua</option>
-          {% for cat in categories %}
-            <option value="{{ cat.pk }}" {% if selected_category == cat.pk %}selected{% endif %}>
-              {{ cat.name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button type="submit" class="btn">Tampilkan</button>
-        <a href="{% url 'reports:weekly_recap' %}" class="btn btn-secondary">Reset</a>
-      </div>
+  <form method="get" class="report-filter-card">
+    <div class="report-filter-field">
+      <label for="id_week" class="label">Minggu mulai</label>
+      <input type="date" name="week" id="id_week" value="{{ week }}" class="input" />
+    </div>
+    <div class="report-filter-field">
+      <label for="id_category" class="label">Kategori</label>
+      <select name="category" id="id_category" class="select">
+        <option value="">Semua kategori</option>
+        {% for cat in categories %}
+          <option value="{{ cat.pk }}" {% if selected_category == cat.pk %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="report-filter-actions">
+      <button type="submit" class="btn">Tampilkan</button>
+      <a href="{% url 'reports:weekly_recap' %}" class="btn btn-secondary">Reset</a>
     </div>
   </form>
 
-  <section class="card mb-6 overflow-hidden">
-    <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Ringkasan Minggu (empat baris)</h2>
-    <table class="w-full text-sm">
-      <thead>
-        <tr>
-          <th class="px-4 py-3 text-left font-medium text-slate-500">Baris</th>
-          <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-200">
-        {% for row in result.summary %}
-          <tr class="{% if row.key == 'selisih' %}font-semibold text-slate-900{% else %}text-slate-700{% endif %}">
-            <td class="px-4 py-3">{{ row.label }}</td>
-            <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <section class="report-section" aria-labelledby="weekly-summary-title">
+    <div class="report-section-heading">
+      <h2 id="weekly-summary-title">Ringkasan minggu</h2>
+    </div>
+    <div class="report-summary-grid">
+      {% for row in result.summary %}
+        <article class="report-summary-card{% if row.key == 'selisih' %} is-total{% endif %}">
+          <h3>{{ row.label }}</h3>
+          <p class="report-summary-value{% if row.key == 'selisih' and row.amount < 0 %} is-negative{% endif %}">
+            Rp {{ row.amount|money_id }}
+          </p>
+        </article>
+      {% endfor %}
+    </div>
   </section>
 
-  <section class="card mb-6 overflow-hidden">
-    <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Detail per Transaksi</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50">
+  <section class="report-section report-table-section" aria-labelledby="weekly-detail-title">
+    <div class="report-section-heading">
+      <h2 id="weekly-detail-title">Detail transaksi</h2>
+    </div>
+    <div class="table-scroll report-table-card">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Tanggal</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Kategori</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Item</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Arus</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Qty</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Saldo Kas</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Stok Berjalan</th>
+            <th>Tanggal</th>
+            <th>Kategori</th>
+            <th>Item</th>
+            <th>Arus</th>
+            <th class="text-right">Nominal</th>
+            <th class="text-right">Qty</th>
+            <th class="text-right">Saldo kas</th>
+            <th class="text-right">Stok berjalan</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
+        <tbody>
           {% for row in result.detail %}
             <tr>
-              <td class="px-4 py-3">{{ row.tanggal|date:"d/m/Y" }}</td>
-              <td class="px-4 py-3">{{ row.kategori }}</td>
-              <td class="px-4 py-3">{{ row.item }}</td>
-              <td class="px-4 py-3">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                  {% if row.flow == 'income' %}bg-emerald-50 text-emerald-800{% else %}bg-rose-50 text-rose-800{% endif %}">
+              <td>{{ row.tanggal|date:"d/m/Y" }}</td>
+              <td>{{ row.kategori }}</td>
+              <td>{{ row.item }}</td>
+              <td>
+                <span class="movement-direction{% if row.flow == 'income' %} is-in{% else %} is-out{% endif %}">
                   {{ FLOW_LABELS|get_item:row.flow }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{% if row.qty %}{{ row.qty|floatformat:3 }}{% else %}-{% endif %}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ row.saldo_kas|floatformat:2 }}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{% if row.stock_item_id %}{{ row.stok_berjalan|floatformat:3 }}{% else %}-{% endif %}</td>
+              <td class="text-right tabular-nums">Rp {{ row.amount|money_id }}</td>
+              <td class="text-right tabular-nums">{% if row.qty %}{{ row.qty|qty_id }}{% else %}—{% endif %}</td>
+              <td class="text-right tabular-nums">Rp {{ row.saldo_kas|money_id }}</td>
+              <td class="text-right tabular-nums">{% if row.stock_item_id %}{{ row.stok_berjalan|qty_id }}{% else %}—{% endif %}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="8" class="px-4 py-8 text-center text-slate-500">Tidak ada transaksi</td>
+              <td colspan="8" class="table-empty-state">Tidak ada transaksi pada minggu ini.</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -106,33 +98,35 @@
     </div>
   </section>
 
-  <section class="card overflow-hidden">
-    <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Stok per Jenis</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50">
+  <section class="report-section report-table-section" aria-labelledby="weekly-stock-title">
+    <div class="report-section-heading">
+      <h2 id="weekly-stock-title">Ringkasan stok</h2>
+    </div>
+    <div class="table-scroll report-table-card">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Jenis Stok</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Opening</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">In</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Out</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Adj</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Closing</th>
+            <th>Jenis stok</th>
+            <th class="text-right">Saldo awal</th>
+            <th class="text-right">Masuk</th>
+            <th class="text-right">Keluar</th>
+            <th class="text-right">Penyesuaian</th>
+            <th class="text-right">Saldo akhir</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
+        <tbody>
           {% for row in result.stock %}
             <tr>
-              <td class="px-4 py-3">{{ row.nama }} ({{ row.kode }})</td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ row.opening|floatformat:3 }}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ row.in_qty|floatformat:3 }}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ row.out_qty|floatformat:3 }}</td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ row.adj|floatformat:3 }}</td>
-              <td class="px-4 py-3 text-right tabular-nums font-semibold">{{ row.closing|floatformat:3 }}</td>
+              <td>{{ row.nama }}</td>
+              <td class="text-right tabular-nums">{{ row.opening|qty_id }}</td>
+              <td class="text-right tabular-nums">{{ row.in_qty|qty_id }}</td>
+              <td class="text-right tabular-nums">{{ row.out_qty|qty_id }}</td>
+              <td class="text-right tabular-nums">{{ row.adj|qty_id }}</td>
+              <td class="text-right tabular-nums font-semibold">{{ row.closing|qty_id }}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="px-4 py-8 text-center text-slate-500">Tidak ada jenis stok</td>
+              <td colspan="6" class="table-empty-state">Belum ada data stok.</td>
             </tr>
           {% endfor %}
         </tbody>

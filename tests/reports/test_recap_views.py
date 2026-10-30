@@ -51,7 +51,11 @@ def test_ac_17_mingguan_200(completed_setup, client):
     client.force_login(completed_setup)
     resp = client.get(reverse("reports:weekly_recap"))
     assert resp.status_code == 200
-    assert "Ringkasan Minggu" in resp.content.decode()
+    content = resp.content.decode()
+    assert "Ringkasan minggu" in content
+    assert "report-summary-grid" in content
+    assert "Detail transaksi" in content
+    assert "Rp 0,00" in content
 
 
 @pytest.mark.django_db

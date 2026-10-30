@@ -1,130 +1,119 @@
 {% extends "base.html" %}
 
+{% load core_tags %}
+
 {% block title %}Stok Harian · {{ company_name }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-  <header class="mb-6">
-    <h1 class="text-2xl font-semibold text-slate-900">Stok Harian</h1>
-    <p class="mt-1 text-sm text-slate-600">
-      Input produksi telur/kotoran (masuk) dan pemakaian pakan (keluar) per tanggal.
-    </p>
+<div class="workspace-page stock-page">
+  <header class="page-heading">
+    <div>
+      <h1>Stok Harian</h1>
+      <p class="page-description">Catat produksi telur, kotoran, dan pemakaian pakan.</p>
+    </div>
   </header>
 
-  <form method="post" class="card mb-6">
+  <form method="post" class="card stock-daily-form">
     {% csrf_token %}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-      <div>
-        <label for="{{ form.stock_item.id_for_label }}" class="label">{{ form.stock_item.label }}</label>
-        {{ form.stock_item }}
-        <p class="mt-1 text-xs text-slate-500">Telur dan kotoran dalam kg; pakan dalam karung.</p>
-      </div>
-      <div>
-        <label for="{{ form.qty.id_for_label }}" class="label">{{ form.qty.label }}</label>
-        {{ form.qty }}
-      </div>
-      <div>
-        <label for="{{ form.date.id_for_label }}" class="label">{{ form.date.label }}</label>
-        {{ form.date }}
-      </div>
-      <div class="flex items-end">
-        <button type="submit" class="btn w-full">Catat</button>
-      </div>
+    <div class="stock-daily-field">
+      <label for="{{ form.stock_item.id_for_label }}" class="label">{{ form.stock_item.label }}</label>
+      {{ form.stock_item }}
+      <p class="stock-form-hint">Telur dan kotoran dalam kg; pakan dalam karung.</p>
     </div>
+    <div class="stock-daily-field">
+      <label for="{{ form.qty.id_for_label }}" class="label">{{ form.qty.label }}</label>
+      {{ form.qty }}
+    </div>
+    <div class="stock-daily-field">
+      <label for="{{ form.date.id_for_label }}" class="label">{{ form.date.label }}</label>
+      {{ form.date }}
+    </div>
+    <button type="submit" class="btn stock-daily-submit">Catat stok</button>
     {% if form.non_field_errors %}
-      <div class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-600/20">
-        {{ form.non_field_errors|join:" " }}
-      </div>
+      <div class="stock-form-errors" role="alert">{{ form.non_field_errors|join:" " }}</div>
     {% endif %}
     {% for field in form %}
       {% if field.errors %}
-        <p class="mt-1 text-sm text-red-700">{{ field.errors|join:" " }}</p>
+        <p class="stock-form-errors" role="alert">{{ field.errors|join:" " }}</p>
       {% endif %}
     {% endfor %}
   </form>
 
-  <section class="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-6">
+  <section class="stock-balance-grid" aria-label="Ringkasan stok">
     {% for card in cards %}
-      <div class="card">
-        <div class="flex items-start justify-between gap-2 mb-2">
+      <article class="stock-balance-card">
+        <div class="stock-balance-heading">
           <div>
-            <h2 class="text-lg font-semibold text-slate-900">{{ card.stock_item.name }}</h2>
-            <p class="text-sm text-slate-500">Satuan: {{ card.unit }} · tetap</p>
+            <h2>{{ card.stock_item.name }}</h2>
+            <p>{{ card.unit }}</p>
           </div>
           {% if card.is_low %}
-            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 ring-1 ring-inset ring-amber-600/30">
-              <span aria-hidden="true">!</span> Menipis
-            </span>
+            <span class="stock-low-badge">Menipis</span>
           {% endif %}
         </div>
-        <dl class="mt-4 space-y-2 text-sm">
-          <div class="flex items-center justify-between gap-2">
-            <dt class="text-slate-500">Stok saat ini</dt>
-            <dd class="font-semibold tabular-nums text-slate-900">{{ card.current_display }} {{ card.unit }}</dd>
+        <dl class="stock-balance-list">
+          <div>
+            <dt>Stok saat ini</dt>
+            <dd class="stock-current-value">{{ card.current_display }} {{ card.unit }}</dd>
           </div>
-          <div class="flex items-center justify-between gap-2">
-            <dt class="text-slate-500">Stok awal</dt>
-            <dd class="tabular-nums text-slate-700">{{ card.opening_display }} {{ card.unit }}</dd>
+          <div>
+            <dt>Stok awal</dt>
+            <dd>{{ card.opening_display }} {{ card.unit }}</dd>
           </div>
-          <div class="flex items-center justify-between gap-2">
-            <dt class="text-slate-500">Ambang minimum</dt>
-            <dd class="tabular-nums text-slate-700">{% if card.min_threshold is not None %}{{ card.min_display }} {{ card.unit }}{% else %}—{% endif %}</dd>
+          <div>
+            <dt>Ambang minimum</dt>
+            <dd>{% if card.min_threshold is not None %}{{ card.min_display }} {{ card.unit }}{% else %}—{% endif %}</dd>
           </div>
         </dl>
-      </div>
+      </article>
     {% endfor %}
   </section>
 
-  <section class="card overflow-hidden">
-    <div class="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-      <div>
-        <h2 class="text-sm font-semibold text-slate-900">Movement harian</h2>
-        <p class="text-xs text-slate-500">Produksi, pemakaian, dan penyesuaian manual.</p>
-      </div>
-      <form method="get" class="flex items-center gap-2">
-        {% csrf_token %}
+  <section class="stock-movements-card">
+    <div class="stock-movements-toolbar">
+      <h2>Pergerakan harian</h2>
+      <form method="get" class="stock-deleted-filter">
         <input type="checkbox" name="show_deleted" value="1" id="id_show_deleted" {% if show_deleted %}checked{% endif %} class="checkbox" />
-        <label for="id_show_deleted" class="text-xs text-slate-600 cursor-pointer mb-0">Tampilkan yang sudah dihapus</label>
+        <label for="id_show_deleted">Tampilkan yang dihapus</label>
       </form>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-slate-50">
+    <div class="table-scroll">
+      <table class="data-table stock-movements-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Tanggal</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Jenis stok</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Arah</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Qty</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Sumber</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Keterangan</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Status</th>
+            <th>Tanggal</th>
+            <th>Jenis stok</th>
+            <th>Arah</th>
+            <th class="text-right">Qty</th>
+            <th>Sumber</th>
+            <th>Keterangan</th>
+            <th>Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-200">
+        <tbody>
           {% for movement in movements %}
-            <tr class="{% if movement.deleted_at %}line-through text-slate-400 bg-slate-50{% else %}hover:bg-slate-50{% endif %}">
-              <td class="px-4 py-3">{{ movement.date|date:"d/m/Y" }}</td>
-              <td class="px-4 py-3">{{ movement.stock_item.name }}</td>
-              <td class="px-4 py-3">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                  {% if movement.direction == 'in' %}bg-emerald-50 text-emerald-800{% else %}bg-rose-50 text-rose-800{% endif %}">
-                  {{ movement.direction|upper }}
+            <tr class="{% if movement.deleted_at %}is-deleted{% endif %}">
+              <td>{{ movement.date|date:"d/m/Y" }}</td>
+              <td>{{ movement.stock_item.name }}</td>
+              <td>
+                <span class="movement-direction{% if movement.direction == 'in' %} is-in{% else %} is-out{% endif %}">
+                  {% if movement.direction == 'in' %}Masuk{% else %}Keluar{% endif %}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right tabular-nums">{{ movement.qty|floatformat:3 }} {{ movement.stock_item.unit }}</td>
-              <td class="px-4 py-3">{% if movement.source == 'adjustment' %}Penyesuaian{% else %}Manual{% endif %}</td>
-              <td class="px-4 py-3 max-w-xs truncate">{{ movement.reason|default:"-" }}</td>
-              <td class="px-4 py-3">
+              <td class="text-right tabular-nums">{{ movement.qty|qty_id }} {{ movement.stock_item.unit }}</td>
+              <td>{% if movement.source == 'adjustment' %}Penyesuaian{% else %}Manual{% endif %}</td>
+              <td class="movement-reason">{{ movement.reason|default:"—" }}</td>
+              <td>
                 {% if movement.deleted_at %}
-                  <span class="badge" style="background: #fee2e2; color: #991b1b; border-color: #fca5a5;">Dihapus</span>
+                  <span class="movement-status is-deleted">Dihapus</span>
                 {% else %}
-                  <span class="badge">Aktif</span>
+                  <span class="movement-status">Aktif</span>
                 {% endif %}
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="px-4 py-8 text-center text-slate-500">Tidak ada movement</td>
+              <td colspan="7" class="table-empty-state">Belum ada pergerakan stok.</td>
             </tr>
           {% endfor %}
         </tbody>

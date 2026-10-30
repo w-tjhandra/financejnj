@@ -2,6 +2,8 @@
 
 from django import template
 
+from core.utils.numbers import format_money, format_qty
+
 register = template.Library()
 
 
@@ -24,3 +26,13 @@ def get_range(value, arg):
     if start > end:
         return []
     return range(start, end + 1)
+
+
+@register.filter
+def money_id(value):
+    return format_money(value)
+
+
+@register.filter
+def qty_id(value):
+    return format_qty(value)

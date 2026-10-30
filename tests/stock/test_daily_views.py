@@ -61,7 +61,11 @@ def test_ac_09_1_halaman_input_200(stock_data, client):
     client.force_login(stock_data)
     resp = client.get(reverse("stock:daily"))
     assert resp.status_code == 200
-    assert "Stok Harian" in resp.content.decode()
+    content = resp.content.decode()
+    assert "Stok Harian" in content
+    assert "stock-daily-form" in content
+    assert "stock-balance-grid" in content
+    assert "Pergerakan harian" in content
 
 
 @pytest.mark.django_db
@@ -131,7 +135,10 @@ def test_ac_14_1_halaman_penyesuaian_200(stock_data, client):
     client.force_login(stock_data)
     resp = client.get(reverse("stock:adjustment"))
     assert resp.status_code == 200
-    assert "Penyesuaian Stok" in resp.content.decode()
+    content = resp.content.decode()
+    assert "Penyesuaian Stok" in content
+    assert "stock-adjustment-fields" in content
+    assert "Simpan penyesuaian" in content
 
 
 @pytest.mark.django_db
