@@ -81,6 +81,41 @@
       </dl>
     </section>
 
+    {% if txn.attachments.exists %}
+    <section class="card">
+      <h2 class="text-sm font-semibold text-slate-900 mb-3">Lampiran ({{ txn.attachments.count }})</h2>
+      <div class="space-y-2">
+        {% for att in txn.attachments.all %}
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+          <div class="flex items-center gap-3">
+            {% if att.mime_type|slice:":5" == "image" %}
+            <span class="text-2xl">🖼️</span>
+            {% elif att.mime_type == "application/pdf" %}
+            <span class="text-2xl">📄</span>
+            {% else %}
+            <span class="text-2xl">📎</span>
+            {% endif %}
+            <div>
+              <p class="font-medium text-slate-900 truncate max-w-xs">{{ att.original_name }}</p>
+              <p class="text-xs text-slate-500">{{ att.mime_type }} · {{ att.size_bytes|filesizeformat }} · {{ att.created_at|date:"d F Y H:i" }}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="{% url 'attachment_download' txn.pk att.pk %}" class="btn btn-sm btn-secondary">Unduh</a>
+            <form method="post" action="{% url 'attachment_delete' txn.pk att.pk %}" class="inline" onsubmit="return confirm('Hapus lampiran ini?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-4 pt-4 border-t border-slate-200">
+        <a href="{% url 'attachment_upload' txn.pk %}" class="btn btn-primary btn-sm">Tambah Lampiran</a>
+      </div>
+    </section>
+    {% endif %}
+
     <section class="card">
       <h2 class="text-sm font-semibold text-slate-900">Jejak transaksi</h2>
       <dl class="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">

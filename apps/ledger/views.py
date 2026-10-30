@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import mimetypes
+import os
 from datetime import date
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods
+from weasyprint import HTML
 
 from core import messages
 from core.errors import DomainError, DuplicateSalary, NotFound, StockConflict, StockInsufficient
@@ -33,7 +39,7 @@ from ledger.forms import (
     TransactionForm,
     transaction_initial,
 )
-from ledger.models import Transaction
+from ledger.models import Attachment, Transaction
 from ledger.services.opening import (
     cash_is_locked,
     cash_locked_since,
@@ -49,9 +55,19 @@ from ledger.services.transactions import (
 )
 from master.models import Item
 from master.services.items import active_items
+from reports.queries import daily_recap, monthly_recap, weekly_recap, yearly_recap
 
 FLOW_LABELS = {"income": "Pemasukan", "expense": "Pengeluaran"}
 PAYMENT_LABELS = {"cash": "Tunai", "transfer": "Transfer"}
+
+
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError:
+        return None
 
 
 def _meta(request: HttpRequest) -> RequestMeta:
@@ -678,3 +694,254 @@ def opening_correction(request: HttpRequest) -> HttpResponse:
             "opening_date_display": format_date_long_id(account.opening_balance_date),
         },
     )
+
+
+# --- Lampiran Transaksi (FR-14, S-06) ----------------------------------------
+
+
+def _validate_upload(file) -> tuple[bytes, str, str]:
+    """Validasi file upload: tipe, ukuran. Kembalikan (content, mime, ext)."""
+    if not file:
+        raise DomainError("File wajib diisi.", code="file_required")
+    content = file.read()
+    if len(content) == 0:
+        raise DomainError("File kosong.", code="file_empty")
+    if len(content) > 10 * 1024 * 1024:
+        raise DomainError("File maksimal 10 MB.", code="file_too_large")
+
+    mime = mimetypes.guess_type(file.name)[0] or ""
+    allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+    if mime not in allowed:
+        raise DomainError(
+            "Format file tidak didukung (JPEG, PNG, WebP, PDF).", code="mime_not_allowed"
+        )
+
+    # Re-check extension matches mime
+
+    ext = os.path.splitext(file.name)[1].lower()
+    return content, mime, ext
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def attachment_upload(request: HttpRequest, pk: int) -> HttpResponse:
+    """Upload lampiran untuk transaksi."""
+    txn = Transaction.objects.filter(pk=pk).first()
+    if txn is None:
+        raise Http404("Transaksi tidak ditemukan.")
+    if txn.deleted_at is not None:
+        raise Http404("Transaksi tidak ditemukan.")
+
+    if request.method == "POST":
+        file = request.FILES.get("file")
+        try:
+            content, mime, ext = _validate_upload(file)
+        except DomainError as exc:
+            flash.error(request, exc.message)
+            return render(request, "ledger/_attachment_form.html", {"txn": txn}, status=200)
+
+        # Save file to media/attachments/
+        import os
+        import uuid
+
+        filename = f"{txn.pk}_{uuid.uuid4().hex[:8]}{ext}"
+        save_path = os.path.join("attachments", filename)
+        from django.core.files.storage import default_storage
+
+        full_path = default_storage.save(save_path, file)
+        default_storage.url(full_path)  # ensure accessible
+
+        # Create attachment record
+        from ledger.models import Attachment
+
+        Attachment.objects.create(
+            transaction=txn,
+            file=full_path,
+            original_name=file.name,
+            mime_type=mime,
+            size_bytes=len(content),
+            uploaded_by=request.user,
+        )
+
+        flash.success(request, "Lampiran ditambahkan.")
+        return redirect("transaction_detail", pk=txn.pk)
+
+    return render(request, "ledger/_attachment_form.html", {"txn": txn})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def attachment_delete(request: HttpRequest, pk: int, att_pk: int) -> HttpResponse:
+    """Hapus lampiran (soft delete)."""
+    txn = Transaction.objects.filter(pk=pk).first()
+    if txn is None:
+        raise Http404("Transaksi tidak ditemukan.")
+
+    att = Attachment.objects.filter(pk=att_pk, transaction=txn).first()
+    if att is None:
+        raise Http404("Lampiran tidak ditemukan.")
+
+    if request.method == "POST":
+        att.soft_delete(actor=request.user)
+        flash.success(request, "Lampiran dihapus.")
+        return redirect("transaction_detail", pk=txn.pk)
+
+    return render(
+        request,
+        "ledger/_attachment_confirm_delete.html",
+        {"txn": txn, "att": att},
+    )
+
+
+@login_required
+@require_GET
+def attachment_download(request: HttpRequest, pk: int, att_pk: int) -> HttpResponse:
+    """Unduh lampiran."""
+    txn = Transaction.objects.filter(pk=pk).first()
+    if txn is None:
+        raise Http404("Transaksi tidak ditemukan.")
+
+    att = Attachment.objects.filter(pk=att_pk, transaction=txn).first()
+    if att is None:
+        raise Http404("Lampiran tidak ditemukan.")
+
+    if not default_storage.exists(att.file):
+        raise Http404("File tidak ditemukan di storage.")
+
+    response = HttpResponse(default_storage.open(att.file, "rb"), content_type=att.mime_type)
+    response["Content-Disposition"] = f'attachment; filename="{att.original_name}"'
+    return response
+
+
+# --- PDF Investor Report (FR-27, FR-28) --------------------------------------
+
+
+@login_required
+@require_GET
+def investor_pdf(request: HttpRequest) -> HttpResponse:
+    """Generate PDF laporan investor (ID/EN) via WeasyPrint."""
+
+    from core.utils.dates import format_date_long_id, today_wib
+    from master.models import CompanyProfile
+
+    # Parse parameters
+    lang = request.GET.get("lang", "id")
+    if lang not in ("id", "en"):
+        lang = "id"
+
+    period_type = request.GET.get("period", "monthly")
+    anchor = _parse_date(request.GET.get("date")) or today_wib()
+
+    # Get company profile
+    profile = CompanyProfile.get_solo()
+
+    # Get recap data based on period
+    if period_type == "daily":
+        result = daily_recap(anchor, anchor, None)
+        period_label = format_date_long_id(anchor) if lang == "id" else anchor.strftime("%B %d, %Y")
+    elif period_type == "weekly":
+        from core.utils.periods import week
+
+        start = week(anchor).start
+        result = weekly_recap(start, None)
+        if lang == "id":
+            period_label = (
+                f"Minggu {start.strftime('%d %B %Y')} – "
+                f"{(start.replace(day=start.day + 6)).strftime('%d %B %Y')}"
+            )
+        else:
+            period_label = (
+                f"Week {start.strftime('%B %d, %Y')} – "
+                f"{(start.replace(day=start.day + 6)).strftime('%B %d, %Y')}"
+            )
+    elif period_type == "yearly":
+        result = yearly_recap(anchor.year, None)
+        period_label = str(anchor.year)
+    else:
+        # monthly default
+        result = monthly_recap(anchor, None)
+        period_label = format_month_id(anchor) if lang == "id" else anchor.strftime("%B %Y")
+
+    # Labels by language
+    if lang == "en":
+        labels = {
+            "company": "Company",
+            "period": "Period",
+            "summary": "Summary",
+            "income": "Income",
+            "expense": "Expense",
+            "non_operational": "Non-Operational",
+            "net": "Net",
+            "stock": "Stock",
+            "opening": "Opening",
+            "in_qty": "In",
+            "out_qty": "Out",
+            "adjustment": "Adjustment",
+            "closing": "Closing",
+            "unit": "Unit",
+            "detail_transactions": "Transaction Details",
+            "date": "Date",
+            "category": "Category",
+            "item": "Item",
+            "type": "Type",
+            "amount": "Amount",
+            "qty": "Qty",
+            "unit_label": "Unit",
+            "generated_at": f"Generated on {today_wib().strftime('%Y-%m-%d %H:%M')}",
+        }
+        flow_labels = {"income": "Income", "expense": "Expense"}
+    else:
+        labels = {
+            "company": "Perusahaan",
+            "period": "Periode",
+            "summary": "Ringkasan",
+            "income": "Pemasukan",
+            "expense": "Pengeluaran",
+            "non_operational": "Mutasi Non-Operasional",
+            "net": "Selisih",
+            "stock": "Stok",
+            "opening": "Saldo Awal",
+            "in_qty": "Masuk",
+            "out_qty": "Keluar",
+            "adjustment": "Penyesuaian",
+            "closing": "Saldo Akhir",
+            "unit": "Satuan",
+            "detail_transactions": "Detail Transaksi",
+            "date": "Tanggal",
+            "category": "Kategori",
+            "item": "Item",
+            "type": "Jenis",
+            "amount": "Jumlah",
+            "qty": "Qty",
+            "unit_label": "Satuan",
+            "generated_at": f"Dibuat pada {today_wib().strftime('%Y-%m-%d %H:%M')}",
+        }
+        flow_labels = {"income": "Pemasukan", "expense": "Pengeluaran"}
+
+    # Build context for template
+    context = {
+        "profile": profile,
+        "result": result,
+        "labels": labels,
+        "flow_labels": flow_labels,
+        "period_label": period_label,
+        "period_type": period_type,
+        "lang": lang,
+        "today": today_wib(),
+        "format_money": format_id_number,
+    }
+
+    # Render HTML
+    html_string = render_to_string("ledger/investor_pdf.html", context)
+
+    # Generate PDF
+    bio = BytesIO()
+    HTML(string=html_string).write_pdf(bio)
+    bio.seek(0)
+
+    filename = f"investor_report_{period_type}_{period_label}_{today_wib().strftime('%Y%m%d')}.pdf"
+    filename = filename.replace(" ", "_").replace("/", "-")
+
+    response = HttpResponse(bio.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response

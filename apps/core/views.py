@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_not_required, login_required
@@ -18,6 +20,14 @@ from core import messages as core_messages
 from core.errors import DomainError
 from core.forms import AccountPasswordChangeForm, CompanyProfileForm, LoginForm
 from core.models import CompanyProfile
+from core.services.locks import (
+    AlreadyLocked,
+    AlreadyUnlocked,
+    lock_period,
+    max_locked_period,
+    period_status,
+    unlock_period,
+)
 from core.services.login_throttle import (
     is_login_locked,
     register_login_failure,
@@ -25,6 +35,7 @@ from core.services.login_throttle import (
 )
 from core.services.profile import update_company_profile
 from core.types import RequestMeta
+from core.utils.dates import add_months, month_start, today_wib
 
 
 @login_not_required
@@ -169,3 +180,79 @@ def error_404(request: HttpRequest, exception: Exception) -> HttpResponse:
 @never_cache
 def error_500(request: HttpRequest) -> HttpResponse:
     return render(request, "500.html", status=500)
+
+
+# --- Period Lock UI (S-16, AC-30.x) --------------------------------------
+
+
+@login_required
+@require_GET
+def period_lock_list(request: HttpRequest) -> HttpResponse:
+    """Daftar status kunci periode (termasuk yang pernah dibuka)."""
+    today = today_wib()
+    max_locked = max_locked_period()
+    opening_date = add_months(today, -24)  # tampilkan 24 bulan mundur
+    if max_locked:
+        opening_date = min(opening_date, max_locked)
+
+    months = []
+    current = month_start(opening_date)
+    while current <= add_months(today, 1):
+        status = period_status(current)
+        months.append(status)
+        current = add_months(current, 1)
+
+    return render(
+        request,
+        "core/period_lock_list.html",
+        {
+            "months": months,
+            "today": today,
+            "max_locked": max_locked,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def period_lock_action(request: HttpRequest, period: str) -> HttpResponse:
+    """Kunci atau buka kunci periode (POST)."""
+    try:
+        target = date.fromisoformat(period)
+    except ValueError:
+        messages.error(request, "Format periode tidak valid.")
+        return redirect("period_lock_list")
+
+    target = month_start(target)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        meta = RequestMeta(
+            ip=request.META.get("REMOTE_ADDR"),
+            user_agent=request.headers.get("User-Agent"),
+        )
+        try:
+            if action == "lock":
+                lock_period(target, actor=request.user, meta=meta)
+                messages.success(request, core_messages.PERIOD_LOCKED)
+            elif action == "unlock":
+                reason = request.POST.get("reason", "").strip()
+                unlock_period(target, reason, actor=request.user, meta=meta)
+                messages.success(request, core_messages.PERIOD_UNLOCKED)
+            else:
+                messages.error(request, "Aksi tidak valid.")
+        except AlreadyLocked as exc:
+            messages.error(request, exc.message)
+        except AlreadyUnlocked as exc:
+            messages.error(request, exc.message)
+        except DomainError as exc:
+            messages.error(request, exc.message)
+        return redirect("period_lock_list")
+
+    # GET - tampilkan detail
+    status = period_status(target)
+    return render(
+        request,
+        "core/period_lock_action.html",
+        {"status": status},
+    )

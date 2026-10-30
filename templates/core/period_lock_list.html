@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Kunci Periode · {{ company_name }}{% endblock %}
+
+{% block content %}
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold text-slate-900">Kunci Periode</h1>
+  <p class="mt-1 text-sm text-slate-600">
+    Mengunci periode mencegah penulisan data pada bulan tersebut. Rantai kunci wajib tanpa lubang dari saldo awal.
+  </p>
+</header>
+
+<div class="card mb-6">
+  <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+    <h3 class="font-semibold text-emerald-800 mb-2">Aturan Kunci Periode</h3>
+    <ul class="text-sm text-emerald-700 space-y-1">
+      <li>• <strong>Rantai tanpa lubang:</strong> Bulan hanya bisa dikunci jika semua bulan sebelumnya (dari saldo awal) sudah terkunci.</li>
+      <li>• <strong>Buka kunci hanya terakhir:</strong> Hanya bulan terkunci terbaru yang boleh dibuka, dan memerlukan alasan minimal 10 karakter.</li>
+      <li>• <strong>Efek luas:</strong> Semua transaksi, stok harian, dan penyesuaian stok pada bulan terkunci ditolak.</li>
+      <li>• <strong>Audit:</strong> Semua lock/unlock dicatat di Audit Log dengan detail transaksi & movement.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Bulan</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Dikunci</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Oleh</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Dibuka</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Oleh</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Alasan</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Jumlah Buka</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Rantai (Gap)</th>
+          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {% for m in months %}
+        <tr class="hover:bg-slate-50 {% if m.period|date:'Y-m' == today|date:'Y-m' %}bg-emerald-50{% endif %}">
+          <td class="px-4 py-3 text-sm font-medium text-slate-900">{{ m.period|date:"F Y" }}</td>
+          <td class="px-4 py-3">
+            {% if m.is_locked %}
+            <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Terkunci</span>
+            {% elif m.was_reopened %}
+            <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Pernah dibuka</span>
+            {% else %}
+            <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Terbuka</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-sm text-slate-500">{{ m.locked_at|date:"Y-m-d H:i"|default:"-" }}</td>
+          <td class="px-4 py-3 text-sm text-slate-500">{{ m.locked_by_id|default:"-" }}</td>
+          <td class="px-4 py-3 text-sm text-slate-500">{{ m.unlocked_at|date:"Y-m-d H:i"|default:"-" }}</td>
+          <td class="px-4 py-3 text-sm text-slate-500">{{ m.unlocked_by_id|default:"-" }}</td>
+          <td class="px-4 py-3 text-sm text-slate-500 max-w-xs truncate">{{ m.unlock_reason|default:"-" }}</td>
+          <td class="px-4 py-3 text-sm text-slate-500 text-center">{{ m.unlock_count }}</td>
+          <td class="px-4 py-3 text-sm text-slate-500">
+            {% if m.chain_gap %}
+            <span class="text-red-600 font-medium">Gap: {{ m.chain_gap|date:"F Y" }}</span>
+            {% else %}
+            <span class="text-emerald-600">Lengkap</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <a href="{% url 'period_lock_action' m.period|date:'Y-m' %}" class="btn btn-sm {% if m.is_locked %}btn-secondary{% else %}btn-primary{% endif %}">
+              {% if m.is_locked %}Buka Kunci{% else %}Kunci{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-4 text-sm text-slate-500">
+  <p><strong>Saldo awal:</strong> {{ today|date:"F Y" }} (periode sebelum ini tidak ditampilkan)</p>
+  <p><strong>Maksimum terkunci:</strong> {% if max_locked %}{{ max_locked|date:"F Y" }}{% else %}Belum ada{% endif %}</p>
+</div>
+{% endblock %}

@@ -202,7 +202,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         start = week(anchor).start
         result = weekly_recap(start, category_id)
         filename = f"rekap_mingguan_{start:%Y%m%d}.xlsx"
-        period_label = f"Minggu {start:%d/%m/%Y} – {(start.replace(day=start.day+6)):%d/%m/%Y}"
+        period_label = f"Minggu {start:%d/%m/%Y} – {(start.replace(day=start.day + 6)):%d/%m/%Y}"
     elif period_type == "monthly":
         anchor = _parse_date(request.GET.get("month")) or today
         result = monthly_recap(anchor, category_id)
@@ -236,7 +236,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
             setattr(cell_k, k, v)
         for k, v in _number_style().items():
             setattr(cell_v, k, v)
-        cell_v.number_format = '#,##0.00'
+        cell_v.number_format = "#,##0.00"
         row += 1
     _auto_width(ws1)
 
@@ -252,7 +252,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         cell_v = ws2.cell(row=row, column=3, value=detail.amount)
         for k, v in _number_style().items():
             setattr(cell_v, k, v)
-        cell_v.number_format = '#,##0.00'
+        cell_v.number_format = "#,##0.00"
         row += 1
     _auto_width(ws2)
 
@@ -268,7 +268,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         cell_v = ws3.cell(row=row, column=3, value=detail.amount)
         for k, v in _number_style().items():
             setattr(cell_v, k, v)
-        cell_v.number_format = '#,##0.00'
+        cell_v.number_format = "#,##0.00"
         row += 1
     _auto_width(ws3)
 
@@ -276,17 +276,22 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     ws4 = wb.create_sheet("Stok")
     _write_header_row(ws4, 1, ["Stok" + cat_name, period_label])
     ws4.merge_cells("A1:F1")
-    _write_header_row(ws4, 2, ["Kode", "Nama", "Satuan", "Saldo Awal", "Masuk", "Keluar", "Penyesuaian", "Saldo Akhir"])
+    _write_header_row(
+        ws4,
+        2,
+        ["Kode", "Nama", "Satuan", "Saldo Awal", "Masuk", "Keluar", "Penyesuaian", "Saldo Akhir"],
+    )
     row = 3
     for stock in result.stock:
         ws4.cell(row=row, column=1, value=stock.kode)
         ws4.cell(row=row, column=2, value=stock.nama)
         ws4.cell(row=row, column=3, value=stock.satuan)
-        for col_idx, val in enumerate([stock.opening, stock.in_qty, stock.out_qty, stock.adj, stock.closing], 4):
+        stock_vals = [stock.opening, stock.in_qty, stock.out_qty, stock.adj, stock.closing]
+        for col_idx, val in enumerate(stock_vals, 4):
             cell = ws4.cell(row=row, column=col_idx, value=val)
             for k, v in _number_style().items():
                 setattr(cell, k, v)
-            cell.number_format = '#,##0.000'
+            cell.number_format = "#,##0.000"
         row += 1
     _auto_width(ws4)
 
@@ -304,12 +309,12 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         cell_amt = ws5.cell(row=row, column=5, value=detail.amount)
         for k, v in _number_style().items():
             setattr(cell_amt, k, v)
-        cell_amt.number_format = '#,##0.00'
+        cell_amt.number_format = "#,##0.00"
         if detail.qty is not None:
             cell_qty = ws5.cell(row=row, column=6, value=detail.qty)
             for k, v in _number_style().items():
                 setattr(cell_qty, k, v)
-            cell_qty.number_format = '#,##0.000'
+            cell_qty.number_format = "#,##0.000"
         ws5.cell(row=row, column=7, value=detail.unit or "")
         row += 1
     _auto_width(ws5)
