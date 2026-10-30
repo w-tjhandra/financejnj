@@ -139,7 +139,7 @@ textarea {
 .stock-daily-form {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, .8fr) minmax(0, 1fr) auto;
-  align-items: end;
+  align-items: start;
   gap: 1rem;
   margin-bottom: 1.25rem;
   padding: 1.25rem 1.4rem;
@@ -166,6 +166,8 @@ textarea {
 }
 
 .stock-daily-submit {
+  align-self: start;
+  margin-top: 1.35rem;
   min-width: 9rem;
 }
 
@@ -1186,6 +1188,7 @@ textarea {
 
   .stock-daily-submit {
     grid-column: 1;
+    margin-top: 0;
   }
 
   .stock-daily-form,
