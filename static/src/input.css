@@ -10,7 +10,8 @@
     display: none !important;
   }
   body {
-    @apply min-h-full bg-slate-50 text-slate-900 antialiased;
+    @apply min-h-full bg-slate-50 font-sans text-slate-900 antialiased;
+    font-family: "Space Grotesk", sans-serif;
     background-color: #f3f5f3;
   }
   :focus-visible {

@@ -17,3 +17,12 @@ sha256sum static/vendor/*
 
 Catatan: Chart.js 4 memakai lisensi MIT. Alpine dan HTMX juga MIT/BSD-2; tidak ada
 komponen berlisensi copyleft di runtime.
+
+## Web font
+
+Space Grotesk dilayani lokal dari `/static/fonts/` agar tipografi tetap konsisten
+tanpa permintaan ke CDN saat aplikasi dibuka.
+
+| Berkas | Versi | Sumber unduhan | Lisensi | SHA-256 |
+|---|---|---|---|---|
+| `space-grotesk-latin.woff2` | v22 | https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2 | SIL OFL 1.1 (`OFL.txt`) | `0640890476fc1198ab4de571fb658de443c4d85b66466ec09534a8737ab1ce9d` |

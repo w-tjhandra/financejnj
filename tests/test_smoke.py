@@ -26,6 +26,9 @@ def test_halaman_login_dapat_dibuka_tanpa_login(client):
     assert 'method="post"' in body
     assert "Nama pengguna" in body
     assert "Kata sandi" in body
+    assert "login-art" in body
+    assert "peternakan ayam petelur" in body
+    assert "login-submit" in body
 
 
 @pytest.mark.django_db

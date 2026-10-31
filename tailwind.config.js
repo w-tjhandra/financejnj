@@ -9,12 +9,8 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: [
-          "system-ui",
-          "-apple-system",
-          "Segoe UI",
-          "Roboto",
-          "Noto Sans",
-          "DejaVu Sans",
+          "Space Grotesk",
+          "Arial",
           "sans-serif",
         ],
       },
