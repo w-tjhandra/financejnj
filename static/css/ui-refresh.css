@@ -50,8 +50,9 @@ textarea {
   overflow: hidden;
   padding: clamp(1.6rem, 3vw, 2.6rem);
   background:
-    radial-gradient(ellipse at 75% 12%, rgb(111 148 105 / 27%), transparent 35%),
-    linear-gradient(145deg, #193c2c 0%, #173226 52%, #10271e 100%);
+    linear-gradient(145deg, rgb(25 60 44 / 84%) 0%, rgb(23 50 38 / 78%) 52%, rgb(16 39 30 / 72%) 100%),
+    url("../images/poultry-farm-interior.webp") center / cover no-repeat,
+    #173226;
   color: #f8fbf6;
 }
 
@@ -85,18 +86,23 @@ textarea {
   gap: .75rem;
 }
 
-.login-brand-mark {
+.login-brand-logo-frame {
   display: grid;
   width: 2.8rem;
   height: 2.8rem;
+  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgb(235 245 231 / 28%);
+  overflow: hidden;
   border-radius: .9rem;
-  background: rgb(255 255 255 / 7%);
-  color: #eff8e9;
-  font-size: .85rem;
-  font-weight: 700;
-  letter-spacing: .04em;
+  background: #fff;
+  padding: .18rem;
+}
+
+.login-brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .login-brand strong,
@@ -146,21 +152,6 @@ textarea {
   color: #c3d1c2;
   font-size: .83rem;
   line-height: 1.65;
-}
-
-.login-art {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 34rem);
-  margin: auto auto .85rem;
-  padding-top: 1.5rem;
-}
-
-.login-art svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 1rem 2rem rgb(0 0 0 / 13%));
 }
 
 .login-visual-footer {
@@ -873,17 +864,23 @@ textarea {
   gap: .75rem;
 }
 
-.brand-mark {
+.brand-logo-frame {
   display: grid;
   width: 2.5rem;
   height: 2.5rem;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgb(222 238 225 / 30%);
+  overflow: hidden;
   border-radius: .75rem;
-  color: #e5f0e5;
-  font-size: .78rem;
-  font-weight: 750;
+  background: #fff;
+  padding: .16rem;
+}
+
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .brand-copy,
@@ -1554,15 +1551,6 @@ textarea {
     display: none;
   }
 
-  .login-art {
-    position: absolute;
-    right: 1rem;
-    bottom: 2.6rem;
-    width: 37%;
-    margin: 0;
-    padding: 0;
-  }
-
   .login-visual-footer {
     margin-top: auto;
     font-size: .57rem;
@@ -1662,11 +1650,6 @@ textarea {
       display: none;
     }
 
-    .login-art {
-      right: .75rem;
-      bottom: 1.5rem;
-      width: 34%;
-    }
   }
 
   .action-grid {

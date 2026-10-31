@@ -1,3 +1,5 @@
+{% load static %}
+
 {% comment %}Navigasi utama aplikasi.{% endcomment %}
 <div class="sidebar-backdrop"
      x-cloak
@@ -9,9 +11,11 @@
 <aside id="app-navigation" class="sidebar-panel" :class="{ 'is-open': sidebarOpen }" aria-label="Navigasi aplikasi">
   <div class="sidebar-brand">
     <a href="{% url 'dashboard' %}" class="brand-link">
-      <span class="brand-mark" aria-hidden="true">TF</span>
+      <span class="brand-logo-frame">
+        <img src="{% static 'images/pt-join-nuriwell-java-logo.webp' %}" alt="" class="brand-logo">
+      </span>
       <span class="brand-copy">
-        <strong>{{ company_name|default:"Telur Finance" }}</strong>
+        <strong>PT Join Nuriwell Java</strong>
         <small>OPERASIONAL TERNAK</small>
       </span>
     </a>

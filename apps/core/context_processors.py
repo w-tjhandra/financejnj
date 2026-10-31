@@ -7,7 +7,7 @@ from django.http import HttpRequest
 
 from core.models import CompanyProfile
 
-DEFAULT_COMPANY_NAME = "Telur Finance"
+DEFAULT_COMPANY_NAME = "PT Join Nuriwell Java"
 
 
 def company_profile(request: HttpRequest) -> dict:

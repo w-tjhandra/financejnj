@@ -1,15 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Masuk · Telur Finance{% endblock %}
+{% load static %}
+
+{% block title %}Masuk · PT Join Nuriwell Java{% endblock %}
 
 {% block content %}
 <div class="login-page">
   <div class="login-card">
     <aside class="login-visual">
       <div class="login-brand">
-        <span class="login-brand-mark" aria-hidden="true">TF</span>
+        <span class="login-brand-logo-frame">
+          <img src="{% static 'images/pt-join-nuriwell-java-logo.webp' %}" alt="" class="login-brand-logo">
+        </span>
         <span>
-          <strong>Telur Finance</strong>
+          <strong>PT Join Nuriwell Java</strong>
           <small>OPERASIONAL TERNAK</small>
         </span>
       </div>
@@ -18,30 +22,6 @@
         <p class="login-kicker">KELOLA USAHA LEBIH MUDAH</p>
         <h1>Semua catatan<br>ternak, satu tempat.</h1>
         <p>Pantau keuangan, stok, dan aktivitas peternakan ayam petelur dengan lebih teratur.</p>
-      </div>
-
-      <div class="login-art" aria-hidden="true">
-        <svg viewBox="0 0 560 350" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="14" y="12" width="532" height="326" rx="26" fill="#E8F0D8"/>
-          <circle cx="448" cy="82" r="34" fill="#F2C66D"/>
-          <path d="M14 229C103 178 180 189 267 225C353 260 454 250 546 196V312C546 326.36 534.36 338 520 338H40C25.6406 338 14 326.36 14 312V229Z" fill="#B7CC9A"/>
-          <path d="M14 269C109 226 198 244 275 274C367 310 466 281 546 251V312C546 326.36 534.36 338 520 338H40C25.6406 338 14 326.36 14 312V269Z" fill="#91AE78"/>
-          <path d="M102 203V130L172 78L242 130V203H102Z" fill="#F8F5E9"/>
-          <path d="M87 134L172 69L257 134" stroke="#BC7151" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M145 203V157C145 142.088 157.088 130 172 130C186.912 130 199 142.088 199 157V203" fill="#D9B77D"/>
-          <path d="M112 149H130M214 149H232" stroke="#C1A16D" stroke-width="7" stroke-linecap="round"/>
-          <path d="M126 204H218" stroke="#8D6845" stroke-width="8" stroke-linecap="round"/>
-          <path d="M306 219C286 199 290 167 314 149C334 134 361 136 378 151C389 139 404 132 420 133C444 134 463 154 464 178C465 204 445 222 420 224L350 233C331 235 315 230 306 219Z" fill="#F8F5E9"/>
-          <path d="M309 192C292 184 282 169 282 152C299 155 313 164 322 178" fill="#F8F5E9"/>
-          <path d="M383 151C377 136 382 121 395 112C401 128 399 141 390 153" fill="#BC7151"/>
-          <circle cx="426" cy="163" r="4" fill="#253C2D"/>
-          <path d="M448 174L471 181L449 188" fill="#D99C4D" stroke="#D99C4D" stroke-width="4" stroke-linejoin="round"/>
-          <path d="M350 226L346 254M397 222L402 252" stroke="#BC7151" stroke-width="6" stroke-linecap="round"/>
-          <path d="M334 257H359M390 255H415" stroke="#BC7151" stroke-width="5" stroke-linecap="round"/>
-          <path d="M474 251C474 230 489 211 506 211C523 211 538 230 538 251C538 269 524 279 506 279C488 279 474 269 474 251Z" fill="#FFFDF5"/>
-          <path d="M441 275C441 258 453 242 467 242C481 242 493 258 493 275C493 290 481 299 467 299C453 299 441 290 441 275Z" fill="#F8F5E9"/>
-          <path d="M66 284H157M184 294H259M300 302H370" stroke="#73935F" stroke-width="5" stroke-linecap="round" opacity=".7"/>
-        </svg>
       </div>
 
       <div class="login-visual-footer">

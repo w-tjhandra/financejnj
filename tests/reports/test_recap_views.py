@@ -118,6 +118,7 @@ def test_dashboard_menampilkan_ringkasan_dan_data_infografis(completed_setup, cl
         "values": [250000],
     }
     content = response.content.decode()
+    assert "images/pt-join-nuriwell-java-logo.webp" in content
     assert 'id="dashboard-cashflow-chart"' in content
     assert 'id="dashboard-category-chart"' in content
     assert "dashboard.js" in content

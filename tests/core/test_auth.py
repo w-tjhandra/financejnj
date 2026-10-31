@@ -51,6 +51,16 @@ def post_password_change(
 
 
 @pytest.mark.django_db
+def test_login_menampilkan_identitas_pt_join_nuriwell_java(client):
+    response = client.get(reverse("login"))
+
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "PT Join Nuriwell Java" in content
+    assert "images/pt-join-nuriwell-java-logo.webp" in content
+
+
+@pytest.mark.django_db
 def test_login_sukses_merotasi_session_dan_memakai_next_internal(client, completed_setup):
     client.get(reverse("login"))
     session = client.session
