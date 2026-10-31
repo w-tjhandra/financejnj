@@ -4,13 +4,14 @@
 {% block title %}Audit Log Detail · {{ company_name }}{% endblock %}
 
 {% block content %}
-<header class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-  <div>
-    <h1 class="text-2xl font-semibold text-slate-900">Audit Log Detail</h1>
-    <p class="mt-1 text-sm text-slate-600">{{ log.entity }} · {{ log.action }} · {{ log.created_at|date:"Y-m-d H:i:s" }}</p>
-  </div>
-  <a href="{% url 'audit:list' %}" class="btn btn-secondary">Kembali</a>
-</header>
+<div class="workspace-page report-page">
+  <header class="page-heading report-page-heading">
+    <div>
+      <h1>Detail riwayat perubahan</h1>
+      <p class="page-description">{{ log.entity }} · {{ log.action }} · {{ log.created_at|date:"Y-m-d H:i:s" }}</p>
+    </div>
+    <a href="{% url 'audit:list' %}" class="btn btn-secondary">Kembali</a>
+  </header>
 
 <div class="grid gap-6 lg:grid-cols-2 mb-6">
   <div class="card">
@@ -106,4 +107,5 @@
   </div>
 </div>
 {% endif %}
+</div>
 {% endblock %}

@@ -58,6 +58,7 @@ def test_login_menampilkan_identitas_pt_join_nuriwell_java(client):
     content = response.content.decode()
     assert "PT Join Nuriwell Java" in content
     assert "images/pt-join-nuriwell-java-logo.webp" in content
+    assert "Lupa kata sandi?" not in content
 
 
 @pytest.mark.django_db

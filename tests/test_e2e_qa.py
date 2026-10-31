@@ -967,7 +967,10 @@ class TestAuditLog:
 
         resp = logged_client.get(reverse("audit:list") + "?entity=transaction")
         assert resp.status_code == 200
-        assert "transaction" in resp.content.decode()
+        content = resp.content.decode()
+        assert "transaction" in content
+        assert 'class="workspace-page report-page"' in content
+        assert "Jenis perubahan" in content
 
         resp = logged_client.get(reverse("audit:list") + "?action=create")
         assert resp.status_code == 200
