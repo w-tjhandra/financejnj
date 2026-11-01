@@ -48,12 +48,7 @@ def test_lock_bulan_pertama_dan_audit_jumlah(completed_setup):
     assert row.locked_by_id == completed_setup.pk
     assert row.locked_at is not None
 
-    audit = AuditLog.objects.get(entity="period_lock", action="lock")
-    assert audit.entity_id == row.pk
-    assert audit.user_id == completed_setup.pk
-    assert audit.extra == {"period": "2026-09", "transactions": 1, "movements": 1}
-    assert audit.after["is_locked"] is True
-    assert audit.before is None
+    assert not AuditLog.objects.filter(entity="period_lock").exists()
 
 
 def test_lock_dengan_lubang_ditolak(completed_setup):
@@ -78,7 +73,7 @@ def test_lock_ganda_ditolak(completed_setup):
         lock_period(SEPTEMBER, actor=completed_setup)
 
     assert exc.value.message == messages.already_locked(SEPTEMBER)
-    assert AuditLog.objects.filter(entity="period_lock", action="lock").count() == 1
+    assert not AuditLog.objects.filter(entity="period_lock").exists()
 
 
 def test_unlock_hanya_bulan_terkunci_terakhir(completed_setup):
@@ -103,11 +98,7 @@ def test_unlock_menyimpan_alasan_dan_audit(completed_setup):
     assert row.unlocked_at is not None
     assert row.unlock_count == 1
 
-    audit = AuditLog.objects.get(entity="period_lock", action="unlock")
-    assert audit.extra["reason"] == REASON
-    assert audit.extra["period"] == "2026-09"
-    assert audit.before["is_locked"] is True
-    assert audit.after["is_locked"] is False
+    assert not AuditLog.objects.filter(entity="period_lock").exists()
 
 
 def test_unlock_alasan_pendek_ditolak(completed_setup):
@@ -149,12 +140,7 @@ def test_relock_setelah_unlock_mencatat_tiga_audit(completed_setup):
     assert row.is_locked is True
     assert row.unlock_count == 1
     assert row.unlock_reason is None
-    actions = list(
-        AuditLog.objects.filter(entity="period_lock")
-        .order_by("created_at", "id")
-        .values_list("action", flat=True)
-    )
-    assert actions == ["lock", "unlock", "lock"]
+    assert not AuditLog.objects.filter(entity="period_lock").exists()
 
 
 def test_period_status_terbuka_terkunci_dan_pernah_dibuka(completed_setup):
@@ -191,8 +177,7 @@ def test_movement_terhapus_tidak_dihitung_di_audit_lock(completed_setup):
 
     lock_period(SEPTEMBER, actor=completed_setup)
 
-    audit = AuditLog.objects.get(entity="period_lock", action="lock")
-    assert audit.extra["movements"] == 0
+    assert not AuditLog.objects.filter(entity="period_lock").exists()
 
 
 @pytest.mark.django_db
@@ -209,8 +194,7 @@ def test_auto_lock_menutup_bulan_lalu_setelah_pukul_0005_dan_tidak_mengunci_ulan
 
     assert row is not None
     assert row.period == date(2026, 11, 1)
-    audit = AuditLog.objects.get(entity="period_lock", entity_id=row.pk, action="lock")
-    assert audit.extra["source"] == "automatic"
+    assert not AuditLog.objects.filter(entity="period_lock").exists()
 
     unlock_period(row.period, REASON, actor=completed_setup)
     assert maybe_auto_lock_previous_period(jadwal) is None

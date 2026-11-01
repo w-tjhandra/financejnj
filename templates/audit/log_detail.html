@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% load core_tags %}
 
-{% block title %}Audit Log Detail · {{ company_name }}{% endblock %}
+{% block title %}Detail riwayat transaksi · {{ company_name }}{% endblock %}
 
 {% block content %}
 <div class="workspace-page report-page">
   <header class="page-heading report-page-heading">
     <div>
-      <h1>Detail riwayat perubahan</h1>
-      <p class="page-description">{{ log.entity }} · {{ log.action }} · {{ log.created_at|date:"Y-m-d H:i:s" }}</p>
+      <h1>Detail riwayat transaksi</h1>
+      <p class="page-description">{% if log.entity == "account_transfer" %}Pindah dana{% else %}Transaksi{% endif %} · {{ log.created_at|date:"Y-m-d H:i:s" }}</p>
     </div>
     <a href="{% url 'audit:list' %}" class="btn btn-secondary">Kembali</a>
   </header>
@@ -24,35 +24,27 @@
         <dd class="col-span-2 text-sm text-slate-900 font-mono">{{ log.created_at|date:"Y-m-d H:i:s" }}</dd>
       </div>
       <div class="py-2 grid grid-cols-3 gap-x-4 gap-y-1">
-        <dt class="text-sm text-slate-500">Entity</dt>
-        <dd class="col-span-2 text-sm text-slate-900"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">{{ log.entity }}</span></dd>
+        <dt class="text-sm text-slate-500">Jenis</dt>
+        <dd class="col-span-2 text-sm text-slate-900"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">{% if log.entity == "account_transfer" %}Pindah dana{% else %}Transaksi{% endif %}</span></dd>
       </div>
       <div class="py-2 grid grid-cols-3 gap-x-4 gap-y-1">
-        <dt class="text-sm text-slate-500">Entity ID</dt>
+        <dt class="text-sm text-slate-500">Nomor</dt>
         <dd class="col-span-2 text-sm text-slate-900 font-mono">{{ log.entity_id|default:"-" }}</dd>
       </div>
       <div class="py-2 grid grid-cols-3 gap-x-4 gap-y-1">
-        <dt class="text-sm text-slate-500">Action</dt>
-        <dd class="col-span-2 text-sm text-slate-900"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">{{ log.action }}</span></dd>
+        <dt class="text-sm text-slate-500">Aktivitas</dt>
+        <dd class="col-span-2 text-sm text-slate-900"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">{% if log.action == "create" %}Dicatat{% elif log.action == "update" %}Diubah{% elif log.action == "delete" %}Dihapus{% else %}{{ log.action }}{% endif %}</span></dd>
       </div>
       <div class="py-2 grid grid-cols-3 gap-x-4 gap-y-1">
         <dt class="text-sm text-slate-500">User</dt>
         <dd class="col-span-2 text-sm text-slate-900">{{ log.user|default:"System" }}</dd>
-      </div>
-      <div class="py-2 grid grid-cols-3 gap-x-4 gap-y-1">
-        <dt class="text-sm text-slate-500">IP</dt>
-        <dd class="col-span-2 text-sm text-slate-500 font-mono">{{ log.ip|default:"-" }}</dd>
-      </div>
-      <div class="py-2 grid grid-cols-3 gap-x-4 gap-y-1">
-        <dt class="text-sm text-slate-500">User Agent</dt>
-        <dd class="col-span-2 text-sm text-slate-500 truncate">{{ log.user_agent|default:"-" }}</dd>
       </div>
     </dl>
   </div>
 
   <div class="card">
     <div class="p-4 border-b border-slate-200">
-      <h3 class="font-semibold text-slate-900">Extra Data</h3>
+      <h3 class="font-semibold text-slate-900">Rincian tambahan transaksi</h3>
     </div>
     <div class="p-4">
       <pre class="text-xs text-slate-700 bg-slate-50 p-3 rounded overflow-auto max-h-64">{{ extra|json_script:"extra-data" }}</pre>
@@ -97,11 +89,11 @@
   </div>
   <div class="grid gap-6 lg:grid-cols-2 p-4">
     <div>
-      <h4 class="text-sm font-medium text-slate-500 mb-2">Before</h4>
+      <h4 class="text-sm font-medium text-slate-500 mb-2">Sebelum</h4>
       <pre class="text-xs text-slate-700 bg-slate-50 p-3 rounded overflow-auto max-h-96">{{ before|json_script:"before-data" }}</pre>
     </div>
     <div>
-      <h4 class="text-sm font-medium text-slate-500 mb-2">After</h4>
+      <h4 class="text-sm font-medium text-slate-500 mb-2">Sesudah</h4>
       <pre class="text-xs text-slate-700 bg-slate-50 p-3 rounded overflow-auto max-h-96">{{ after|json_script:"after-data" }}</pre>
     </div>
   </div>

@@ -11,10 +11,16 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 
-from audit.constants import ACTION_VALUES, ENTITY_VALUES
+from audit.constants import ACTION_VALUES, HISTORY_ENTITIES
 from audit.models import AuditLog
 from core.utils.dates import today_wib
 from core.utils.numbers import format_id_number
+
+ACTION_LABELS = {
+    "create": "Dicatat",
+    "update": "Diubah",
+    "delete": "Dihapus",
+}
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -29,17 +35,14 @@ def _parse_date(value: str | None) -> date | None:
 @login_required
 @require_GET
 def audit_log_list(request: HttpRequest) -> HttpResponse:
-    """Daftar audit log dengan filter entity, action, tanggal, dan pencarian."""
-    entity = request.GET.get("entity", "").strip()
+    """Daftar riwayat transaksi dan pindah dana."""
     action = request.GET.get("action", "").strip()
     date_from = _parse_date(request.GET.get("date_from"))
     date_to = _parse_date(request.GET.get("date_to"))
     q = request.GET.get("q", "").strip()
 
-    qs = AuditLog.objects.select_related("user")
+    qs = AuditLog.objects.filter(entity__in=HISTORY_ENTITIES).select_related("user")
 
-    if entity and entity in ENTITY_VALUES:
-        qs = qs.filter(entity=entity)
     if action and action in ACTION_VALUES:
         qs = qs.filter(action=action)
     if date_from:
@@ -53,7 +56,6 @@ def audit_log_list(request: HttpRequest) -> HttpResponse:
             | Q(before__icontains=q)
             | Q(after__icontains=q)
             | Q(extra__icontains=q)
-            | Q(user_agent__icontains=q)
         )
 
     paginator = Paginator(qs, 50)
@@ -64,9 +66,7 @@ def audit_log_list(request: HttpRequest) -> HttpResponse:
         "audit/log_list.html",
         {
             "page": page,
-            "entities": ENTITY_VALUES,
-            "actions": ACTION_VALUES,
-            "selected_entity": entity,
+            "actions": ACTION_LABELS.items(),
             "selected_action": action,
             "date_from": date_from.isoformat() if date_from else "",
             "date_to": date_to.isoformat() if date_to else "",
@@ -78,8 +78,13 @@ def audit_log_list(request: HttpRequest) -> HttpResponse:
 @login_required
 @require_GET
 def audit_log_detail(request: HttpRequest, pk: int) -> HttpResponse:
-    """Detail audit log - before/after diff."""
-    log = AuditLog.objects.select_related("user").filter(pk=pk).first()
+    """Detail satu perubahan transaksi atau pindah dana."""
+    log = (
+        AuditLog.objects.filter(entity__in=HISTORY_ENTITIES)
+        .select_related("user")
+        .filter(pk=pk)
+        .first()
+    )
     if not log:
         return render(request, "404.html", status=404)
 
@@ -123,14 +128,11 @@ def audit_export(request: HttpRequest) -> HttpResponse:
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter
 
-    entity = request.GET.get("entity", "").strip()
     action = request.GET.get("action", "").strip()
     date_from = _parse_date(request.GET.get("date_from"))
     date_to = _parse_date(request.GET.get("date_to"))
 
-    qs = AuditLog.objects.select_related("user")
-    if entity and entity in ENTITY_VALUES:
-        qs = qs.filter(entity=entity)
+    qs = AuditLog.objects.filter(entity__in=HISTORY_ENTITIES).select_related("user")
     if action and action in ACTION_VALUES:
         qs = qs.filter(action=action)
     if date_from:
@@ -140,7 +142,7 @@ def audit_export(request: HttpRequest) -> HttpResponse:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = "Audit Log"
+    ws.title = "Riwayat transaksi"
 
     thin_border = Border(
         left=Side(style="thin"),
@@ -161,15 +163,13 @@ def audit_export(request: HttpRequest) -> HttpResponse:
 
     headers = [
         "Waktu",
-        "Entity",
-        "Entity ID",
-        "Action",
-        "User",
-        "IP",
-        "User Agent",
-        "Before",
-        "After",
-        "Extra",
+        "Jenis",
+        "Nomor",
+        "Aktivitas",
+        "Pengguna",
+        "Sebelum",
+        "Sesudah",
+        "Catatan tambahan",
     ]
     for col_idx, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_idx, value=header)
@@ -179,17 +179,23 @@ def audit_export(request: HttpRequest) -> HttpResponse:
     row = 2
     for log in qs.iterator(chunk_size=100):
         ws.cell(row=row, column=1, value=log.created_at.strftime("%Y-%m-%d %H:%M:%S"))
-        ws.cell(row=row, column=2, value=log.entity)
+        ws.cell(
+            row=row,
+            column=2,
+            value="Pindah dana" if log.entity == "account_transfer" else "Transaksi",
+        )
         ws.cell(row=row, column=3, value=log.entity_id)
-        ws.cell(row=row, column=4, value=log.action)
+        ws.cell(
+            row=row,
+            column=4,
+            value=ACTION_LABELS.get(log.action, log.action),
+        )
         ws.cell(row=row, column=5, value=str(log.user) if log.user else "-")
-        ws.cell(row=row, column=6, value=log.ip or "-")
-        ws.cell(row=row, column=7, value=log.user_agent or "-")
-        ws.cell(row=row, column=8, value=str(log.before or ""))
-        ws.cell(row=row, column=9, value=str(log.after or ""))
-        ws.cell(row=row, column=10, value=str(log.extra or ""))
+        ws.cell(row=row, column=6, value=str(log.before or ""))
+        ws.cell(row=row, column=7, value=str(log.after or ""))
+        ws.cell(row=row, column=8, value=str(log.extra or ""))
 
-        for col_idx in range(1, 11):
+        for col_idx in range(1, 9):
             cell = ws.cell(row=row, column=col_idx)
             for k, v in cell_style.items():
                 setattr(cell, k, v)
@@ -212,5 +218,5 @@ def audit_export(request: HttpRequest) -> HttpResponse:
         bio.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    resp["Content-Disposition"] = f'attachment; filename="audit_log_{today:%Y%m%d}.xlsx"'
+    resp["Content-Disposition"] = f'attachment; filename="riwayat_transaksi_{today:%Y%m%d}.xlsx"'
     return resp

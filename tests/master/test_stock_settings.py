@@ -63,8 +63,7 @@ def test_ac_06_1_ambang_minimum_memunculkan_badge_menipis(auth_client):
     page = auth_client.get(reverse("stock:settings"))
     assert "Menipis" in page.content.decode()
 
-    audit = AuditLog.objects.get(entity="stock_item", action="update", entity_id=feed.pk)
-    assert audit.after["min_threshold"] == "2000.000"
+    assert not AuditLog.objects.filter(entity="stock_item").exists()
 
     assert _post_stock(auth_client, "feed", opening="1.500", threshold="1.000").status_code == 302
     assert _cards()["feed"].is_low is False
@@ -80,8 +79,7 @@ def test_ac_06_2_stok_awal_telur_bisa_diubah_tanpa_movement(auth_client):
     assert egg.opening_qty == Decimal("25.000")
     assert _cards()["egg"].current_qty == Decimal("25.000")
 
-    audit = AuditLog.objects.get(entity="stock_item", action="update", entity_id=egg.pk)
-    assert audit.after["opening_qty"] == "25.000"
+    assert not AuditLog.objects.filter(entity="stock_item").exists()
 
 
 @pytest.mark.django_db

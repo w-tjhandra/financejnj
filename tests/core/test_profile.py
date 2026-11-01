@@ -48,9 +48,7 @@ def test_ac_03_1_ubah_nama_tersimpan_dan_header_memakai_nama_baru(auth_client):
     assert profile.phone == "0812-3456-7890"
     assert profile.email == "pemilik@telurjaya.test"
 
-    audit = AuditLog.objects.get(entity="company_profile", action="update")
-    assert audit.after["name"] == "Telur Jaya Farm Baru"
-    assert audit.before["name"] == "Telur Jaya Farm"
+    assert not AuditLog.objects.filter(entity="company_profile").exists()
 
     page = auth_client.get(reverse("dashboard"))
     assert "Telur Jaya Farm Baru" in page.content.decode()

@@ -55,7 +55,7 @@ def test_ac_09_1_produksi_telur_membuat_movement_in(seeded_stok):
     assert m.direction == "in"
     assert m.qty == Decimal("10.000")
     assert m.source == "manual"
-    assert AuditLog.objects.filter(entity="stock_movement", action="create").count() == 1
+    assert not AuditLog.objects.filter(entity="stock_movement").exists()
 
 
 def test_ac_09_2_produksi_kotoran_membuat_movement_in(seeded_stok):
@@ -157,7 +157,7 @@ def test_ac_10_6_audit_tercatat(seeded_stok):
     record_consumption(
         stock_item=feed, date=date(2026, 10, 1), qty=Decimal("10"), actor=_user(seeded_stok)
     )
-    assert AuditLog.objects.filter(entity="stock_movement", action="create").count() == 1
+    assert not AuditLog.objects.filter(entity="stock_movement").exists()
 
 
 def test_ac_14_1_positif_tambah_stok(seeded_stok):
@@ -240,7 +240,7 @@ def test_ac_14_6_audit_tercatat(seeded_stok):
         reason="Alasan penyesuaian yang valid",
         actor=_user(seeded_stok),
     )
-    assert AuditLog.objects.filter(entity="stock_movement", action="create").count() == 1
+    assert not AuditLog.objects.filter(entity="stock_movement").exists()
 
 
 def test_ac_15_1_hapus_manual_mengembalikan_stok(seeded_stok):
@@ -253,7 +253,7 @@ def test_ac_15_1_hapus_manual_mengembalikan_stok(seeded_stok):
     delete_manual(movement_id=m.pk, actor=_user(seeded_stok))
     m.refresh_from_db()
     assert m.deleted_at is not None
-    assert AuditLog.objects.filter(entity="stock_movement", action="delete").count() == 1
+    assert not AuditLog.objects.filter(entity="stock_movement").exists()
 
 
 def test_ac_15_2_hapus_idempoten(seeded_stok):
@@ -266,7 +266,7 @@ def test_ac_15_2_hapus_idempoten(seeded_stok):
     delete_manual(movement_id=m.pk, actor=_user(seeded_stok))
     result = delete_manual(movement_id=m.pk, actor=_user(seeded_stok))
     assert result.pk == m.pk
-    assert AuditLog.objects.filter(entity="stock_movement", action="delete").count() == 1
+    assert not AuditLog.objects.filter(entity="stock_movement").exists()
 
 
 def test_ac_15_3_hapus_adjustment_ditolak(seeded_stok):

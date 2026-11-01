@@ -1,4 +1,4 @@
-"""URL Audit Log Viewer (BR-14, AC-32.x)."""
+"""URL riwayat transaksi."""
 
 from django.urls import path
 

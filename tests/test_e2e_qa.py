@@ -1005,42 +1005,52 @@ class TestReports:
 
 
 # =========================================================================
-# 7. AUDIT LOG (BR-14)
+# 7. TRANSACTION HISTORY
 # =========================================================================
 
 
 class TestAuditLog:
-    """List with filters, detail diff, XLSX export."""
+    """Only transaction and internal-transfer history is visible."""
 
     @pytest.mark.django_db
     def test_audit_log_list_filters(self, logged_client, master_data):
         log_audit(entity="transaction", entity_id=1, action="create", actor=master_data["user"], after={"amount": "100000"})
+        log_audit(entity="account_transfer", entity_id=2, action="create", actor=master_data["user"], after={"amount": "50000"})
         log_audit(entity="stock_movement", entity_id=1, action="create", actor=master_data["user"], after={"qty": "100"})
         log_audit(entity="stock_item", entity_id=1, action="update", actor=master_data["user"], before={"opening_qty": "1000"}, after={"opening_qty": "2000"})
+        legacy_log = AuditLog.objects.create(entity="stock_item", entity_id=1, action="update")
 
-        resp = logged_client.get(reverse("audit:list") + "?entity=transaction")
+        resp = logged_client.get(reverse("audit:list"))
         assert resp.status_code == 200
         content = resp.content.decode()
-        assert "transaction" in content
+        assert "Riwayat transaksi" in content
+        assert "Jenis data" not in content
+        assert AuditLog.objects.count() == 3
+        assert "Pindah dana" in content
         assert 'class="workspace-page report-page"' in content
-        assert "Jenis perubahan" in content
+        assert "Aktivitas transaksi" in content
 
         resp = logged_client.get(reverse("audit:list") + "?action=create")
         assert resp.status_code == 200
-        assert "create" in resp.content.decode()
+        assert resp.context["page"].paginator.count == 2
 
         today = today_wib().isoformat()
         resp = logged_client.get(reverse("audit:list") + f"?date_from={today}&date_to={today}")
         assert resp.status_code == 200
+        assert resp.context["page"].paginator.count == 2
 
         resp = logged_client.get(reverse("audit:list") + "?q=100000")
         assert resp.status_code == 200
+        assert resp.context["page"].paginator.count == 1
+
+        hidden_detail = logged_client.get(reverse("audit:detail", args=[legacy_log.pk]))
+        assert hidden_detail.status_code == 404
 
     @pytest.mark.django_db
     def test_audit_log_detail_diff(self, logged_client, master_data):
         log_audit(
-            entity="stock_item",
-            entity_id=master_data["stock"]["feed"].pk,
+            entity="transaction",
+            entity_id=1,
             action="update",
             actor=master_data["user"],
             before={"opening_qty": "1000", "min_threshold": "100"},
@@ -1059,17 +1069,19 @@ class TestAuditLog:
     @pytest.mark.django_db
     def test_audit_export_xlsx(self, logged_client, master_data):
         log_audit(entity="transaction", entity_id=1, action="create", actor=master_data["user"], after={"amount": "100000"})
+        AuditLog.objects.create(entity="stock_item", entity_id=1, action="update")
 
         resp = logged_client.get(reverse("audit:export"))
         assert resp.status_code == 200
         assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in resp["Content-Type"]
 
         wb = load_workbook(BytesIO(resp.content))
-        assert wb.sheetnames == ["Audit Log"]
-        ws = wb["Audit Log"]
+        assert wb.sheetnames == ["Riwayat transaksi"]
+        ws = wb["Riwayat transaksi"]
         assert ws.cell(row=1, column=1).value == "Waktu"
-        assert ws.cell(row=1, column=2).value == "Entity"
-        assert ws.cell(row=2, column=2).value == "transaction"
+        assert ws.cell(row=1, column=2).value == "Jenis"
+        assert ws.cell(row=2, column=2).value == "Transaksi"
+        assert ws.max_row == 2
 
 
 # =========================================================================

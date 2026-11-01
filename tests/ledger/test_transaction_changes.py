@@ -181,7 +181,8 @@ def test_ac_10_6_created_tetap_updated_berubah_dan_audit_diff(seeded):
 
     audit = AuditLog.objects.get(entity="transaction", action="update")
     assert audit.user_id == seeded.pk
-    assert audit.ip == "203.0.113.7"
+    assert audit.ip is None
+    assert audit.user_agent is None
     assert set(audit.before) == {"amount", "qty"}
     assert audit.before["amount"] == "520000.00"
     assert audit.after["amount"] == "600000.00"
@@ -319,7 +320,8 @@ def test_ac_11_5_audit_delete_snapshot_dan_idempoten(seeded):
 
     audit = AuditLog.objects.get(entity="transaction", action="delete")
     assert audit.user_id == seeded.pk
-    assert audit.ip == "203.0.113.8"
+    assert audit.ip is None
+    assert audit.user_agent is None
     assert audit.before["amount"] == "520000.00"
     assert audit.before["qty"] == "20.000"
     assert audit.before["notes"] == "Setoran pagi"

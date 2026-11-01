@@ -58,9 +58,7 @@ def test_ac_07_1_saldo_awal_bisa_diubah_sebelum_ada_transaksi(auth_client):
     assert account.opening_balance == Decimal("300000000.00")
     assert account.opening_balance_date == date(2026, 9, 1)
 
-    audit = AuditLog.objects.get(entity="account", entity_id=account.pk, action="update")
-    assert audit.after["opening_balance"] == "300000000.00"
-    assert audit.before["opening_balance"] == "250000000.00"
+    assert not AuditLog.objects.filter(entity="account").exists()
 
     page = auth_client.get(reverse("opening_balance"))
     body = page.content.decode()

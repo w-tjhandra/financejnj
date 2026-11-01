@@ -258,7 +258,7 @@ def test_item_sistem_hanya_lewat_koreksi(seeded):
     assert exc.value.code == "item_system"
 
 
-def test_audit_create_lengkap_dengan_actor_dan_ip(seeded):
+def test_riwayat_transaksi_mencatat_actor_tanpa_metadata_browser(seeded):
     meta = RequestMeta(ip="203.0.113.9", user_agent="uji")
 
     txn = _create(item_code="egg_sales", qty="2", actor=seeded, meta=meta)
@@ -266,8 +266,8 @@ def test_audit_create_lengkap_dengan_actor_dan_ip(seeded):
     audit = AuditLog.objects.get(entity="transaction", action="create")
     assert audit.entity_id == txn.pk
     assert audit.user_id == seeded.pk
-    assert audit.ip == "203.0.113.9"
-    assert audit.user_agent == "uji"
+    assert audit.ip is None
+    assert audit.user_agent is None
     assert audit.after["amount"] == "520000.00"
     assert audit.after["qty"] == "2.000"
     assert audit.after["category"] == txn.category_id

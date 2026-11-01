@@ -15,6 +15,8 @@ ENTITY_VALUES = (
     "export",
 )
 
+HISTORY_ENTITIES = frozenset({"transaction", "account_transfer"})
+
 ACTION_VALUES = (
     "create",
     "update",

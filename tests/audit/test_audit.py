@@ -51,7 +51,7 @@ def test_log_audit_menyerialkan_uuid():
 
 
 @pytest.mark.django_db
-def test_log_audit_export_entity_id_null(django_user_model):
+def test_log_audit_does_not_store_export_events(django_user_model):
     user = django_user_model.objects.create_user(username="auditor", password="RahasiaKandang2026")
 
     entry = log_audit(
@@ -63,12 +63,8 @@ def test_log_audit_export_entity_id_null(django_user_model):
         meta=RequestMeta(ip="203.0.113.5", user_agent="x" * 250),
     )
 
-    assert entry.entity == "export"
-    assert entry.entity_id is None
-    assert entry.user_id == user.pk
-    assert entry.extra["period"] == "2026-09-01"
-    assert entry.ip == "203.0.113.5"
-    assert len(entry.user_agent) == 200
+    assert entry is None
+    assert not AuditLog.objects.exists()
 
 
 @pytest.mark.django_db

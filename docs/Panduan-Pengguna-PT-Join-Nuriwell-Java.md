@@ -108,7 +108,7 @@ dan stok sudah diperiksa sebelum mengunci.
 | **Transaksi** | Mencatat, mencari, dan memeriksa pemasukan serta pengeluaran. |
 | **Saldo awal** | Melihat atau mengatur saldo awal BCA, Mandiri, IBK, dan Tunai. |
 | **Pindah dana** | Mencatat perpindahan uang antar sumber tanpa mengubah pemasukan/pengeluaran. |
-| **Riwayat aktivitas** | Melihat catatan perubahan yang dilakukan di aplikasi. |
+| **Riwayat transaksi** | Melihat catatan transaksi keuangan dan pindah dana antar sumber. |
 | **Stok harian** | Mencatat hasil produksi dan pemakaian stok setiap hari. |
 | **Penyesuaian stok** | Mengoreksi selisih stok dengan alasan yang dicatat. |
 | **Pengaturan stok** | Melihat stok awal dan mengatur ambang minimum stok. |
@@ -143,7 +143,7 @@ transaksi dikelompokkan atau stok dihitung.
 | **Selisih** | Perhitungan pemasukan dikurangi pengeluaran, ditambah koreksi saldo awal bila ada. |
 | **Mutasi non-operasional** | Koreksi saldo awal yang ditampilkan terpisah dari pemasukan dan pengeluaran biasa. |
 | **Kunci periode** | Pengaturan yang membuat data pada bulan tersebut tidak dapat diubah. |
-| **Riwayat aktivitas** | Catatan siapa yang melakukan perubahan dan kapan perubahan dilakukan. |
+| **Riwayat transaksi** | Melihat catatan transaksi keuangan dan pindah dana antar sumber. |
 | **Ekspor Excel / XLSX** | Mengunduh laporan sebagai file lembar kerja untuk disimpan atau diolah. |
 
 ## Hal penting tentang angka dan laporan

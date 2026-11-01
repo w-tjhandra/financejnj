@@ -395,10 +395,7 @@ def test_finalisasi_membuat_semua_data_master(client):
     assert Account.objects.get(code="cash").opening_balance == Decimal("250000000.00")
     assert_master_seeded()
 
-    audit = AuditLog.objects.get(entity="company_profile", action="update")
-    assert audit.entity_id == profile.pk
-    assert audit.extra == {"event": "setup_completed"}
-    assert audit.after == {"setup_completed": True}
+    assert not AuditLog.objects.filter(entity="company_profile").exists()
     assert SETUP_DRAFT_KEY not in client.session
 
 
@@ -416,7 +413,7 @@ def test_finalisasi_idempoten_tidak_menggandakan_data(client):
     assert Category.objects.count() == 4
     assert Item.objects.count() == 10
     assert StockItem.objects.count() == 3
-    assert AuditLog.objects.filter(entity="company_profile", action="update").count() == 1
+    assert not AuditLog.objects.filter(entity="company_profile").exists()
 
 
 @pytest.mark.django_db

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ipaddress
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
@@ -11,7 +10,7 @@ from uuid import UUID
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 
-from audit.constants import ACTION_VALUES, ENTITY_VALUES
+from audit.constants import ACTION_VALUES, ENTITY_VALUES, HISTORY_ENTITIES
 from audit.models import AuditLog
 from core.types import RequestMeta
 
@@ -65,15 +64,6 @@ def diff(before: dict | None, after: dict | None) -> tuple[dict, dict]:
     return changed_before, changed_after
 
 
-def _clean_ip(value: str | None) -> str | None:
-    if not value:
-        return None
-    try:
-        return str(ipaddress.ip_address(value))
-    except ValueError:
-        return None
-
-
 def log_audit(
     *,
     entity: str,
@@ -84,7 +74,8 @@ def log_audit(
     after: dict | None = None,
     extra: dict | None = None,
     meta: RequestMeta | None = None,
-) -> AuditLog:
+) -> AuditLog | None:
+    """Store transaction history only; keep other system events out of the log."""
     if entity not in ENTITY_VALUES:
         raise ValueError(f"entity audit tidak dikenal: {entity!r}")
     if action not in ACTION_VALUES:
@@ -93,9 +84,10 @@ def log_audit(
         raise ValueError("entity export wajib entity_id NULL")
     if action == "login_failed" and entity_id is not None:
         raise ValueError("login_failed wajib entity_id NULL")
+    if entity not in HISTORY_ENTITIES:
+        return None
 
     user = actor if actor is not None and getattr(actor, "is_authenticated", True) else None
-    user_agent = (meta.user_agent or "")[:200] if meta and meta.user_agent else None
     return AuditLog.objects.create(
         user=user,
         entity=entity,
@@ -104,6 +96,4 @@ def log_audit(
         before=serialize_value(before) if before is not None else None,
         after=serialize_value(after) if after is not None else None,
         extra=serialize_value(extra) if extra is not None else None,
-        ip=_clean_ip(meta.ip) if meta else None,
-        user_agent=user_agent,
     )
