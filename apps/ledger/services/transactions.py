@@ -31,7 +31,7 @@ from core.utils.dates import (
     today_wib,
 )
 from core.utils.numbers import format_qty
-from ledger.models import Account, Transaction
+from ledger.models import TRANSFER_BANK_VALUES, Account, Transaction
 from master.models import Category, Item
 from stock import api as stock_api
 from stock.models import StockMovement
@@ -53,6 +53,7 @@ AUDIT_FIELDS = (
     "qty",
     "unit",
     "payment_method",
+    "transfer_bank",
     "notes",
     "period_month",
     "is_opening_correction",
@@ -153,6 +154,27 @@ def _normalize_payment(payment_method: object) -> str | None:
             message, code="payment_method_invalid", fields={"payment_method": message}
         )
     return payment
+
+
+def _normalize_transfer_bank(payment_method: str | None, transfer_bank: object) -> str | None:
+    bank = None if transfer_bank in (None, "") else str(transfer_bank)
+    if payment_method == "transfer":
+        if bank not in TRANSFER_BANK_VALUES:
+            message = "Pilih bank untuk transaksi transfer."
+            raise DomainError(
+                message,
+                code="transfer_bank_required",
+                fields={"transfer_bank": message},
+            )
+        return bank
+    if bank is not None:
+        message = "Bank hanya dapat diisi untuk transaksi transfer."
+        raise DomainError(
+            message,
+            code="transfer_bank_payment_mismatch",
+            fields={"transfer_bank": message},
+        )
+    return None
 
 
 def _normalize_notes(notes: object) -> str:
@@ -313,6 +335,7 @@ def create_transaction(
     qty=None,
     unit=None,
     payment_method: str | None = None,
+    transfer_bank: str | None = None,
     notes: str = "",
     period_month=None,
     idempotency_key=None,
@@ -347,6 +370,7 @@ def create_transaction(
     )
 
     payment = _normalize_payment(payment_method)
+    bank = _normalize_transfer_bank(payment, transfer_bank)
     notes = _normalize_notes(notes)
 
     direction = None
@@ -402,6 +426,7 @@ def create_transaction(
                     qty=quantity,
                     unit=unit_value,
                     payment_method=payment,
+                    transfer_bank=bank,
                     notes=notes,
                     period_month=period,
                     created_by=actor if getattr(actor, "pk", None) else None,
@@ -453,6 +478,7 @@ def update_transaction(
     qty=None,
     unit=None,
     payment_method: str | None = None,
+    transfer_bank: str | None = None,
     notes: str = "",
     period_month=None,
     actor=None,
@@ -503,6 +529,7 @@ def update_transaction(
             opening_balance_date=account.opening_balance_date,
         )
         payment = _normalize_payment(payment_method)
+        bank = _normalize_transfer_bank(payment, transfer_bank)
         notes = _normalize_notes(notes)
 
         new_stock_item = item.stock_item if item.stock_item_id is not None else None
@@ -569,6 +596,7 @@ def update_transaction(
         txn.qty = quantity
         txn.unit = unit_value
         txn.payment_method = payment
+        txn.transfer_bank = bank
         txn.notes = notes
         txn.period_month = period
         txn.updated_by = actor if getattr(actor, "pk", None) else None
@@ -587,6 +615,7 @@ def update_transaction(
                         "qty",
                         "unit",
                         "payment_method",
+                        "transfer_bank",
                         "notes",
                         "period_month",
                         "updated_by",
@@ -753,6 +782,7 @@ def duplicate_prefill(transaction_id: int) -> dict:
         "qty": txn.qty,
         "unit": txn.unit,
         "payment_method": txn.payment_method,
+        "transfer_bank": txn.transfer_bank,
         "notes": txn.notes,
         "period_month": period,
     }

@@ -13,7 +13,6 @@ Covers:
 10. PDF Investor Report FR-27, FR-28 (WeasyPrint ID/EN, all period types)
 
 BUGS FOUND DURING TESTING:
-- BUG-001: XLSX export uses non-existent `income_detail`/`expense_detail` attributes on RecapResult (should use `detail` with flow filter)
 - BUG-002: PDF Investor Report has wrong import: `from master.models import CompanyProfile` should be `from core.models import CompanyProfile`
 - BUG-003: Transaction list template uses invalid filter `get_item`
 - BUG-004: Duplicate account prevention test fails because setup wizard redirects to profile after first completion
@@ -34,11 +33,18 @@ from openpyxl import load_workbook
 
 from audit.models import AuditLog
 from audit.service import log_audit
-from core.errors import DomainError, DuplicateSalary, NotFound, PeriodLocked, StockConflict, StockInsufficient
+from core.errors import (
+    DomainError,
+    DuplicateSalary,
+    NotFound,
+    PeriodLocked,
+    StockConflict,
+    StockInsufficient,
+)
 from core.models import CompanyProfile, PeriodLock
 from core.services.locks import (
-    UNLOCK_REASON_MIN,
     UNLOCK_REASON_MAX,
+    UNLOCK_REASON_MIN,
     chain_gap,
     is_date_editable,
     lock_period,
@@ -48,7 +54,12 @@ from core.services.locks import (
 from core.utils.dates import add_months, month_start, today_wib
 from core.utils.numbers import format_id_number, format_money, format_qty, parse_id_number
 from ledger.models import ATTACHMENT_MAX_BYTES, Account, Attachment, Transaction
-from ledger.services.opening import cash_is_locked, cash_locked_since, record_opening_correction, set_opening_balance
+from ledger.services.opening import (
+    cash_is_locked,
+    cash_locked_since,
+    record_opening_correction,
+    set_opening_balance,
+)
 from ledger.services.transactions import (
     create_transaction,
     delete_transaction,
@@ -910,13 +921,9 @@ class TestReports:
         assert egg.closing == Decimal("600")
 
     @pytest.mark.django_db
-    @pytest.mark.xfail(reason="BUG-001: RecapResult missing income_detail/expense_detail attributes")
-    def test_xlsx_export_5_sheets_bug(self, logged_client, master_data):
-        """BUG-001: XLSX export fails - RecapResult missing income_detail/expense_detail attributes.
-        
-        The RecapResult has `detail` (combined) but not separate income_detail/expense_detail.
-        This test documents the bug and expects it to fail until fixed.
-        """
+    def test_xlsx_export_5_sheets_includes_payment_method_and_bank(
+        self, logged_client, master_data
+    ):
         item_jual = master_data["items"]["egg_sales"]
         item_pakan = master_data["items"]["feed"]
         cat_income = master_data["categories"]["layer"]
@@ -925,16 +932,45 @@ class TestReports:
         today = today_wib()
 
         create_transaction(date=today, flow="income", category=cat_income, item=item_jual, amount=Decimal("1000000"), qty=Decimal("20"), actor=account)
-        create_transaction(date=today, flow="expense", category=cat_feed, item=item_pakan, amount=Decimal("500000"), qty=Decimal("10"), actor=account)
+        create_transaction(
+            date=today,
+            flow="expense",
+            category=cat_feed,
+            item=item_pakan,
+            amount=Decimal("500000"),
+            qty=Decimal("10"),
+            payment_method="transfer",
+            transfer_bank="ibk",
+            actor=account,
+        )
 
         resp = logged_client.get(reverse("reports:export_daily") + f"?date_from={today}&date_to={today}")
-        # Currently fails with AttributeError
-        assert resp.status_code == 500  # Bug causes 500
+        assert resp.status_code == 200
+        workbook = load_workbook(BytesIO(resp.content), read_only=True)
+        assert workbook.sheetnames == [
+            "Ringkasan",
+            "Pemasukan",
+            "Pengeluaran",
+            "Stok",
+            "Detail Transaksi",
+        ]
+        rows = list(workbook["Detail Transaksi"].iter_rows(values_only=True))
+        assert rows[1] == (
+            "Tanggal",
+            "Kategori",
+            "Item",
+            "Jenis",
+            "Jumlah",
+            "Qty",
+            "Satuan",
+            "Metode",
+            "Bank",
+        )
+        transfer_row = next(row for row in rows[2:] if row[2] == item_pakan.name)
+        assert transfer_row[7:9] == ("Transfer", "IBK")
 
     @pytest.mark.django_db
-    @pytest.mark.xfail(reason="BUG-001: Same bug affects all XLSX exports")
-    def test_xlsx_export_all_period_types_bug(self, logged_client, master_data):
-        """BUG-001: All XLSX exports fail with same bug."""
+    def test_xlsx_export_all_period_types(self, logged_client, master_data):
         item_jual = master_data["items"]["egg_sales"]
         cat_income = master_data["categories"]["layer"]
         account = master_data["user"]
@@ -945,11 +981,14 @@ class TestReports:
         for period_type, url_name, params in [
             ("daily", "reports:export_daily", f"?date_from={today}&date_to={today}"),
             ("weekly", "reports:export_weekly", f"?week={today}"),
-            ("monthly", "reports:export_monthly", f"?month={today}"),
-            ("yearly", "reports:export_yearly", f"?year=2026"),
+            ("monthly", "reports:export_monthly", f"?month={today:%Y-%m}"),
+            ("yearly", "reports:export_yearly", f"?year={today.year}"),
         ]:
             resp = logged_client.get(reverse(url_name) + params)
-            assert resp.status_code == 500, f"{period_type} export should fail with bug"
+            assert resp.status_code == 200, f"{period_type} export should succeed"
+            assert resp["Content-Type"] == (
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
 
 # =========================================================================

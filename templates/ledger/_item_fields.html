@@ -47,12 +47,24 @@
   {% endif %}
 </div>
 
-<div>
+<div x-data="{ paymentMethod: '{{ form.payment_method.value|default:'' }}' }">
   <label for="{{ form.payment_method.id_for_label }}" class="label">Metode bayar</label>
-  {{ form.payment_method }}
+  <select name="{{ form.payment_method.html_name }}" id="{{ form.payment_method.id_for_label }}"
+          class="input" @change="paymentMethod = $event.target.value">
+    {% for value, label in form.payment_method.field.choices %}
+      <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
   {% if form.payment_method.errors %}
     <p role="alert" class="mt-1 text-sm text-red-700">{{ form.payment_method.errors|join:" " }}</p>
   {% endif %}
+  <div class="mt-3" x-show="paymentMethod === 'transfer'" x-cloak>
+    <label for="{{ form.transfer_bank.id_for_label }}" class="label">{{ form.transfer_bank.label }}</label>
+    {{ form.transfer_bank }}
+    {% if form.transfer_bank.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.transfer_bank.errors|join:" " }}</p>
+    {% endif %}
+  </div>
 </div>
 
 <div>

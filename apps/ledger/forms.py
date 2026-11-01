@@ -13,6 +13,7 @@ from core import messages
 from core.errors import DomainError
 from core.utils.dates import month_start, today_wib
 from core.utils.numbers import format_id_number, format_money, parse_id_number
+from ledger.models import TRANSFER_BANK_CHOICES
 from ledger.services.opening import MONEY_MAX, REASON_MAX, REASON_MIN
 from ledger.services.transactions import QTY_MAX
 from master.models import FLOW_CHOICES, PAYMENT_METHOD_CHOICES, Category, Item
@@ -102,7 +103,7 @@ class TransactionForm(forms.Form):
                 "hx-get": "/transaksi/field-item",
                 "hx-trigger": "change",
                 "hx-target": "#item-fields",
-                "hx-include": "#id_item, #id_date, #id_flow",
+                "hx-include": "#id_item, #id_date, #id_flow, #id_payment_method, #id_transfer_bank",
                 "hx-swap": "innerHTML",
             }
         ),
@@ -163,6 +164,12 @@ class TransactionForm(forms.Form):
         label="Metode bayar",
         widget=forms.Select(attrs={"class": "input"}),
     )
+    transfer_bank = forms.ChoiceField(
+        required=False,
+        choices=[("", "— Pilih bank —"), *TRANSFER_BANK_CHOICES],
+        label="Bank transfer",
+        widget=forms.Select(attrs={"class": "input"}),
+    )
     notes = forms.CharField(
         required=False,
         max_length=500,
@@ -206,8 +213,8 @@ class TransactionForm(forms.Form):
             initial.setdefault("item", item.pk)
             if not self._raw_value(data, initial, "category") and item.default_category_id:
                 initial.setdefault("category", item.default_category_id)
-            if not self._raw_value(data, initial, "payment_method"):
-                initial.setdefault("payment_method", item.default_payment_method or "")
+            if data is None and not self._raw_value(data, initial, "payment_method"):
+                initial["payment_method"] = item.default_payment_method or ""
             if item.frequency == "monthly" and not self._raw_value(data, initial, "period_month"):
                 period = self._default_period(initial, data).strftime("%Y-%m")
                 initial.setdefault("period_month", period)
@@ -348,6 +355,11 @@ class TransactionForm(forms.Form):
             cleaned["unit"] = item.stock_item.unit
         if item is not None and not cleaned.get("payment_method"):
             cleaned["payment_method"] = item.default_payment_method or None
+        if cleaned.get("payment_method") == "transfer":
+            if not cleaned.get("transfer_bank"):
+                self.add_error("transfer_bank", "Pilih bank untuk transaksi transfer.")
+        else:
+            cleaned["transfer_bank"] = None
         return cleaned
 
 
@@ -362,6 +374,7 @@ def transaction_initial(txn) -> dict:
         "qty": format_id_number(txn.qty, 3, trim=True) if txn.qty is not None else "",
         "unit": txn.unit or "",
         "payment_method": txn.payment_method or "",
+        "transfer_bank": txn.transfer_bank or "",
         "notes": txn.notes,
         "period_month": txn.period_month.strftime("%Y-%m") if txn.period_month else "",
     }

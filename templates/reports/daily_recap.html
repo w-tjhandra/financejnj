@@ -76,6 +76,7 @@
             <th class="px-4 py-3 text-left font-medium text-slate-500">Kategori</th>
             <th class="px-4 py-3 text-left font-medium text-slate-500">Item</th>
             <th class="px-4 py-3 text-left font-medium text-slate-500">Arus</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Metode / Bank</th>
             <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
             <th class="px-4 py-3 text-right font-medium text-slate-500">Qty</th>
             <th class="px-4 py-3 text-right font-medium text-slate-500">Saldo Kas</th>
@@ -94,6 +95,7 @@
                   {{ FLOW_LABELS|get_item:row.flow }}
                 </span>
               </td>
+              <td class="px-4 py-3">{% if row.payment_method == 'transfer' %}Transfer · {{ BANK_LABELS|get_item:row.transfer_bank|default:"—" }}{% elif row.payment_method == 'cash' %}Tunai{% else %}—{% endif %}</td>
               <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
               <td class="px-4 py-3 text-right tabular-nums">{% if row.qty %}{{ row.qty|floatformat:3 }}{% else %}-{% endif %}</td>
               <td class="px-4 py-3 text-right tabular-nums">{{ row.saldo_kas|floatformat:2 }}</td>
@@ -101,7 +103,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="8" class="px-4 py-8 text-center text-slate-500">Tidak ada transaksi</td>
+              <td colspan="9" class="px-4 py-8 text-center text-slate-500">Tidak ada transaksi</td>
             </tr>
           {% endfor %}
         </tbody>

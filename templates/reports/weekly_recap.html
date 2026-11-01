@@ -66,6 +66,7 @@
             <th>Kategori</th>
             <th>Item</th>
             <th>Arus</th>
+            <th>Metode / Bank</th>
             <th class="text-right">Nominal</th>
             <th class="text-right">Qty</th>
             <th class="text-right">Saldo kas</th>
@@ -83,6 +84,7 @@
                   {{ FLOW_LABELS|get_item:row.flow }}
                 </span>
               </td>
+              <td>{% if row.payment_method == 'transfer' %}Transfer · {{ BANK_LABELS|get_item:row.transfer_bank|default:"—" }}{% elif row.payment_method == 'cash' %}Tunai{% else %}—{% endif %}</td>
               <td class="text-right tabular-nums">Rp {{ row.amount|money_id }}</td>
               <td class="text-right tabular-nums">{% if row.qty %}{{ row.qty|qty_id }}{% else %}—{% endif %}</td>
               <td class="text-right tabular-nums">Rp {{ row.saldo_kas|money_id }}</td>
@@ -90,7 +92,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="8" class="table-empty-state">Tidak ada transaksi pada minggu ini.</td>
+              <td colspan="9" class="table-empty-state">Tidak ada transaksi pada minggu ini.</td>
             </tr>
           {% endfor %}
         </tbody>

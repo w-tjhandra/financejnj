@@ -56,6 +56,8 @@ def _create(*, item_code="egg_sales", amount="520000", actor=None, **kwargs):
     kwargs.setdefault("category", item.default_category)
     kwargs.setdefault("item", item)
     kwargs.setdefault("amount", amount)
+    if kwargs.get("payment_method") == "transfer":
+        kwargs.setdefault("transfer_bank", "bca")
     return create_transaction(actor=actor, **kwargs)
 
 
@@ -70,6 +72,7 @@ def _update(txn, **kwargs):
         "qty": txn.qty,
         "unit": txn.unit,
         "payment_method": txn.payment_method,
+        "transfer_bank": txn.transfer_bank or ("bca" if txn.payment_method == "transfer" else None),
         "notes": txn.notes,
         "period_month": txn.period_month,
     }
@@ -434,6 +437,7 @@ def test_ac_12_1_duplikat_prefill_tanggal_hari_ini_dan_field_sama(seeded, monkey
         amount="6500000",
         qty="250",
         payment_method="transfer",
+        transfer_bank="mandiri",
         notes="Setoran pagi",
         date=date(2026, 10, 27),
     )
@@ -448,6 +452,7 @@ def test_ac_12_1_duplikat_prefill_tanggal_hari_ini_dan_field_sama(seeded, monkey
     assert prefill["qty"] == Decimal("250.000")
     assert prefill["unit"] == "kg"
     assert prefill["payment_method"] == "transfer"
+    assert prefill["transfer_bank"] == "mandiri"
     assert prefill["notes"] == "Setoran pagi"
     assert prefill["period_month"] is None
     assert "created_by" not in prefill

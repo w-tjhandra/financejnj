@@ -48,6 +48,8 @@ def _create(*, item_code="egg_sales", amount="520000", **kwargs):
     kwargs.setdefault("category", item.default_category)
     kwargs.setdefault("item", item)
     kwargs.setdefault("amount", amount)
+    if kwargs.get("payment_method") == "transfer":
+        kwargs.setdefault("transfer_bank", "bca")
     return create_transaction(**kwargs)
 
 
@@ -62,6 +64,7 @@ def _payload(item_code="egg_sales", **overrides):
         "qty": "20" if item.stock_item_id else "",
         "unit": item.unit or "",
         "payment_method": "transfer",
+        "transfer_bank": "bca",
         "notes": "",
         "period_month": "",
     }
@@ -137,6 +140,28 @@ def test_ac_08_7_item_pakan_default_metode_bayar_transfer(auth_client):
 
     body = response.content.decode()
     assert '<option value="transfer" selected>Transfer</option>' in body
+    assert "Mandiri" in body
+    assert "BCA" in body
+    assert "IBK" in body
+
+
+def test_transfer_memerlukan_bank_yang_valid(auth_client):
+    response = _post_create(auth_client, transfer_bank="")
+
+    assert response.status_code == 200
+    assert "Pilih bank untuk transaksi transfer." in response.content.decode()
+    assert not Transaction.objects.exists()
+
+
+@pytest.mark.parametrize("bank,label", [("mandiri", "Mandiri"), ("bca", "BCA"), ("ibk", "IBK")])
+def test_transaksi_transfer_menyimpan_bank_yang_dipilih(auth_client, bank, label):
+    response = _post_create(auth_client, transfer_bank=bank)
+
+    assert response.status_code == 302
+    txn = Transaction.objects.get()
+    assert txn.transfer_bank == bank
+    detail = _detail(auth_client, txn).content.decode()
+    assert f"Transfer · {label}" in detail
 
 
 def test_ac_09_1_item_bulanan_memunculkan_bulan_gaji(auth_client):
@@ -292,6 +317,7 @@ def _salary_payload(**overrides):
         "qty": "",
         "unit": "",
         "payment_method": "transfer",
+        "transfer_bank": "bca",
         "notes": "",
         "period_month": "2026-10",
     }
@@ -518,6 +544,7 @@ def test_detail_menampilkan_semua_field_terformat(auth_client, seeded):
         qty="20",
         amount="520000",
         payment_method="transfer",
+        transfer_bank="mandiri",
         notes="Setoran pagi",
         actor=seeded,
     )

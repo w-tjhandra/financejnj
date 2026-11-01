@@ -24,6 +24,8 @@ from master.models import Category
 from reports.queries import daily_recap, monthly_recap, weekly_recap, yearly_recap
 
 FLOW_LABELS = {"income": "Pemasukan", "expense": "Pengeluaran"}
+PAYMENT_LABELS = {"cash": "Tunai", "transfer": "Transfer"}
+BANK_LABELS = {"mandiri": "Mandiri", "bca": "BCA", "ibk": "IBK"}
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -185,6 +187,7 @@ def daily_recap_view(request: HttpRequest) -> HttpResponse:
             "date_from": date_from.isoformat(),
             "date_to": date_to.isoformat(),
             "FLOW_LABELS": FLOW_LABELS,
+            "BANK_LABELS": BANK_LABELS,
         },
     )
 
@@ -205,6 +208,7 @@ def weekly_recap_view(request: HttpRequest) -> HttpResponse:
             "selected_category": _category_id(request),
             "week": start.isoformat(),
             "FLOW_LABELS": FLOW_LABELS,
+            "BANK_LABELS": BANK_LABELS,
         },
     )
 
@@ -224,6 +228,7 @@ def monthly_recap_view(request: HttpRequest) -> HttpResponse:
             "selected_category": _category_id(request),
             "month": month_start(anchor).strftime("%Y-%m"),
             "FLOW_LABELS": FLOW_LABELS,
+            "BANK_LABELS": BANK_LABELS,
         },
     )
 
@@ -246,6 +251,7 @@ def yearly_recap_view(request: HttpRequest) -> HttpResponse:
             "selected_category": _category_id(request),
             "year": year,
             "FLOW_LABELS": FLOW_LABELS,
+            "BANK_LABELS": BANK_LABELS,
         },
     )
 
@@ -268,10 +274,11 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         period_label = f"{date_from:%d/%m/%Y} – {date_to:%d/%m/%Y}"
     elif period_type == "weekly":
         anchor = _parse_date(request.GET.get("week")) or today
-        start = week(anchor).start
+        week_range = week(anchor)
+        start = week_range.start
         result = weekly_recap(start, category_id)
         filename = f"rekap_mingguan_{start:%Y%m%d}.xlsx"
-        period_label = f"Minggu {start:%d/%m/%Y} – {(start.replace(day=start.day + 6)):%d/%m/%Y}"
+        period_label = f"Minggu {start:%d/%m/%Y} – {week_range.end:%d/%m/%Y}"
     elif period_type == "monthly":
         anchor = _parse_month(request.GET.get("month")) or today
         result = monthly_recap(anchor, category_id)
@@ -316,9 +323,9 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     _write_header_row(ws2, 2, ["Tanggal", "Item", "Jumlah"])
     row = 3
     for detail in [d for d in result.detail if d.get("flow") == "income"]:
-        ws2.cell(row=row, column=1, value=detail.date.strftime("%d/%m/%Y"))
-        ws2.cell(row=row, column=2, value=detail.item_name)
-        cell_v = ws2.cell(row=row, column=3, value=detail.amount)
+        ws2.cell(row=row, column=1, value=detail["tanggal"].strftime("%d/%m/%Y"))
+        ws2.cell(row=row, column=2, value=detail["item"])
+        cell_v = ws2.cell(row=row, column=3, value=detail["amount"])
         for k, v in _number_style().items():
             setattr(cell_v, k, v)
         cell_v.number_format = "#,##0.00"
@@ -332,9 +339,9 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     _write_header_row(ws3, 2, ["Tanggal", "Item", "Jumlah"])
     row = 3
     for detail in [d for d in result.detail if d.get("flow") == "expense"]:
-        ws3.cell(row=row, column=1, value=detail.date.strftime("%d/%m/%Y"))
-        ws3.cell(row=row, column=2, value=detail.item_name)
-        cell_v = ws3.cell(row=row, column=3, value=detail.amount)
+        ws3.cell(row=row, column=1, value=detail["tanggal"].strftime("%d/%m/%Y"))
+        ws3.cell(row=row, column=2, value=detail["item"])
+        cell_v = ws3.cell(row=row, column=3, value=detail["amount"])
         for k, v in _number_style().items():
             setattr(cell_v, k, v)
         cell_v.number_format = "#,##0.00"
@@ -367,24 +374,34 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
     # Sheet 5: Detail Transaksi
     ws5 = wb.create_sheet("Detail Transaksi")
     _write_header_row(ws5, 1, ["Detail Transaksi" + cat_name, period_label])
-    ws5.merge_cells("A1:G1")
-    _write_header_row(ws5, 2, ["Tanggal", "Kategori", "Item", "Jenis", "Jumlah", "Qty", "Satuan"])
+    ws5.merge_cells("A1:I1")
+    _write_header_row(
+        ws5,
+        2,
+        ["Tanggal", "Kategori", "Item", "Jenis", "Jumlah", "Qty", "Satuan", "Metode", "Bank"],
+    )
     row = 3
     for detail in result.detail:
-        ws5.cell(row=row, column=1, value=detail.date.strftime("%d/%m/%Y"))
-        ws5.cell(row=row, column=2, value=detail.category_name)
-        ws5.cell(row=row, column=3, value=detail.item_name)
-        ws5.cell(row=row, column=4, value="Pemasukan" if detail.flow == "income" else "Pengeluaran")
-        cell_amt = ws5.cell(row=row, column=5, value=detail.amount)
+        ws5.cell(row=row, column=1, value=detail["tanggal"].strftime("%d/%m/%Y"))
+        ws5.cell(row=row, column=2, value=detail["kategori"])
+        ws5.cell(row=row, column=3, value=detail["item"])
+        ws5.cell(
+            row=row,
+            column=4,
+            value="Pemasukan" if detail["flow"] == "income" else "Pengeluaran",
+        )
+        cell_amt = ws5.cell(row=row, column=5, value=detail["amount"])
         for k, v in _number_style().items():
             setattr(cell_amt, k, v)
         cell_amt.number_format = "#,##0.00"
-        if detail.qty is not None:
-            cell_qty = ws5.cell(row=row, column=6, value=detail.qty)
+        if detail["qty"] is not None:
+            cell_qty = ws5.cell(row=row, column=6, value=detail["qty"])
             for k, v in _number_style().items():
                 setattr(cell_qty, k, v)
             cell_qty.number_format = "#,##0.000"
-        ws5.cell(row=row, column=7, value=detail.unit or "")
+        ws5.cell(row=row, column=7, value=detail["unit"] or "")
+        ws5.cell(row=row, column=8, value=PAYMENT_LABELS.get(detail["payment_method"], ""))
+        ws5.cell(row=row, column=9, value=BANK_LABELS.get(detail["transfer_bank"], ""))
         row += 1
     _auto_width(ws5)
 

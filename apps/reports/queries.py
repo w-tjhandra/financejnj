@@ -158,6 +158,7 @@ def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
     sql = f"""
         WITH txns AS (
             SELECT t.id AS txn_id, t.date, t.flow, t.amount, t.qty, t.unit,
+                   t.payment_method, t.transfer_bank,
                    c.code AS kategori_code, c.name AS kategori_name,
                    i.name AS item_name, i.stock_item_id
             FROM ledger_transaction t
@@ -192,9 +193,13 @@ def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
         SELECT k.date AS tanggal,
                k.kategori_name AS kategori,
                k.item_name AS item,
+               k.stock_item_id AS stock_item_id,
                k.flow AS flow,
                k.amount AS amount,
                k.qty AS qty,
+               k.unit AS unit,
+               k.payment_method AS payment_method,
+               k.transfer_bank AS transfer_bank,
                (k.flow_delta + {opening_clause}) AS saldo_kas,
                COALESCE(si.opening_qty, 0) + COALESCE(mv.run_delta, 0) AS stok_berjalan
         FROM kas k

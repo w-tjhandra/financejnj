@@ -154,7 +154,7 @@
                 {% endif %}
               </td>
               <td class="px-4 py-3">
-                {% if txn.payment_method == 'transfer' %}Transfer
+                {% if txn.payment_method == 'transfer' %}Transfer{% if txn.transfer_bank %} · {{ txn.get_transfer_bank_display }}{% endif %}
                 {% elif txn.payment_method == 'cash' %}Tunai
                 {% else %}<span class="text-gray-300">-</span>{% endif %}
               </td>
@@ -199,7 +199,7 @@
             <div><span class="font-medium">Item:</span> {{ txn.item.name }}</div>
             <div><span class="font-medium">Nominal:</span> {{ txn.amount|floatformat:2 }}</div>
             <div><span class="font-medium">Qty:</span> {% if txn.qty %}{{ txn.qty|floatformat:3 }} {{ txn.unit }}{% else %}-{% endif %}</div>
-            <div class="col-span-2"><span class="font-medium">Metode:</span> {% if txn.payment_method == 'transfer' %}Transfer{% elif txn.payment_method == 'cash' %}Tunai{% else %}-{% endif %}</div>
+            <div class="col-span-2"><span class="font-medium">Metode:</span> {% if txn.payment_method == 'transfer' %}Transfer{% if txn.transfer_bank %} · {{ txn.get_transfer_bank_display }}{% endif %}{% elif txn.payment_method == 'cash' %}Tunai{% else %}-{% endif %}</div>
             <div class="col-span-2"><span class="font-medium">Keterangan:</span> {{ txn.notes|default:"-" }}</div>
           </div>
           <div class="flex items-center justify-between pt-2 border-t border-gray-200">

@@ -66,7 +66,7 @@
         {% endif %}
         <div>
           <dt class="text-slate-500">Metode bayar</dt>
-          <dd class="mt-1 text-slate-900">{{ payment_display }}</dd>
+          <dd class="mt-1 text-slate-900">{{ payment_display }}{% if transfer_bank_display %} · {{ transfer_bank_display }}{% endif %}</dd>
         </div>
         {% if period_display %}
           <div>

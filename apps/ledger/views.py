@@ -175,6 +175,7 @@ def _transaction_payload(form: TransactionForm) -> dict:
         "qty": data.get("qty"),
         "unit": data.get("unit"),
         "payment_method": data.get("payment_method") or None,
+        "transfer_bank": data.get("transfer_bank") or None,
         "notes": data.get("notes") or "",
         "period_month": data.get("period_month"),
     }
@@ -194,6 +195,7 @@ def _form_initial_with_item(request: HttpRequest) -> dict:
         "qty",
         "unit",
         "payment_method",
+        "transfer_bank",
         "notes",
         "period_month",
     ]
@@ -213,6 +215,8 @@ def _form_initial_with_item(request: HttpRequest) -> dict:
             initial["unit"] = request.GET["unit"]
         if request.GET.get("payment_method"):
             initial["payment_method"] = request.GET["payment_method"]
+        if request.GET.get("transfer_bank"):
+            initial["transfer_bank"] = request.GET["transfer_bank"]
         if request.GET.get("notes"):
             initial["notes"] = request.GET["notes"]
         if request.GET.get("period_month"):
@@ -386,6 +390,7 @@ def transaction_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "date_display": format_date_long_id(txn.date),
         "flow_display": FLOW_LABELS.get(txn.flow, txn.flow),
         "payment_display": PAYMENT_LABELS.get(txn.payment_method or "", "—"),
+        "transfer_bank_display": txn.get_transfer_bank_display() if txn.transfer_bank else "",
         "qty_display": format_qty(txn.qty) if txn.qty is not None else "",
         "period_display": format_month_id(txn.period_month) if txn.period_month else "",
         "created_at_display": format_datetime_wib(txn.created_at),
@@ -409,6 +414,7 @@ def _delete_context(txn: Transaction, *, error: str = "", **extra) -> dict:
         "date_display": format_date_long_id(txn.date),
         "flow_display": FLOW_LABELS.get(txn.flow, txn.flow),
         "payment_display": PAYMENT_LABELS.get(txn.payment_method or "", "—"),
+        "transfer_bank_display": txn.get_transfer_bank_display() if txn.transfer_bank else "",
         "qty_display": format_qty(txn.qty) if txn.qty is not None else "",
         "period_display": format_month_id(txn.period_month) if txn.period_month else "",
         "deleted": txn.deleted_at is not None,
@@ -472,6 +478,8 @@ def transaction_item_fields(request: HttpRequest) -> HttpResponse:
         "date": request.GET.get("date") or today_wib().isoformat(),
         "flow": request.GET.get("flow") or "expense",
         "item": request.GET.get("item") or "",
+        "payment_method": request.GET.get("payment_method") or "",
+        "transfer_bank": request.GET.get("transfer_bank") or "",
     }
     form = TransactionForm(initial=initial)
     return render(
@@ -842,17 +850,18 @@ def investor_pdf(request: HttpRequest) -> HttpResponse:
     elif period_type == "weekly":
         from core.utils.periods import week
 
-        start = week(anchor).start
+        week_range = week(anchor)
+        start = week_range.start
         result = weekly_recap(start, None)
         if lang == "id":
             period_label = (
                 f"Minggu {start.strftime('%d %B %Y')} – "
-                f"{(start.replace(day=start.day + 6)).strftime('%d %B %Y')}"
+                f"{week_range.end.strftime('%d %B %Y')}"
             )
         else:
             period_label = (
                 f"Week {start.strftime('%B %d, %Y')} – "
-                f"{(start.replace(day=start.day + 6)).strftime('%B %d, %Y')}"
+                f"{week_range.end.strftime('%B %d, %Y')}"
             )
     elif period_type == "yearly":
         result = yearly_recap(anchor.year, None)

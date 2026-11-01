@@ -13,6 +13,12 @@ from master.models import Category, Item
 CURRENCY_RE = r"^[A-Z]{3}$"
 FLOW_VALUES = ["income", "expense"]
 PAYMENT_METHOD_VALUES = ["cash", "transfer"]
+TRANSFER_BANK_CHOICES = [
+    ("mandiri", "Mandiri"),
+    ("bca", "BCA"),
+    ("ibk", "IBK"),
+]
+TRANSFER_BANK_VALUES = [value for value, _label in TRANSFER_BANK_CHOICES]
 ATTACHMENT_MIME_TYPES = [
     "image/jpeg",
     "image/png",
@@ -64,6 +70,9 @@ class Transaction(SoftDeleteModel):
     qty = models.DecimalField(max_digits=18, decimal_places=3, null=True, blank=True)
     unit = models.CharField(max_length=10, null=True, blank=True)
     payment_method = models.CharField(max_length=10, null=True, blank=True)
+    transfer_bank = models.CharField(
+        max_length=10, choices=TRANSFER_BANK_CHOICES, null=True, blank=True
+    )
     notes = models.CharField(max_length=500, blank=True, default="")
     period_month = models.DateField(null=True, blank=True)
     is_opening_correction = models.BooleanField(default=False)
@@ -113,6 +122,14 @@ class Transaction(SoftDeleteModel):
                 condition=Q(payment_method__isnull=True)
                 | Q(payment_method__in=PAYMENT_METHOD_VALUES),
                 name="txn_payment_method_allowed",
+            ),
+            models.CheckConstraint(
+                condition=Q(transfer_bank__isnull=True)
+                | (
+                    Q(transfer_bank__in=TRANSFER_BANK_VALUES)
+                    & Q(payment_method="transfer")
+                ),
+                name="txn_transfer_bank_allowed",
             ),
             models.CheckConstraint(condition=Q(flow__in=FLOW_VALUES), name="txn_flow_allowed"),
             models.CheckConstraint(
