@@ -351,6 +351,14 @@ def transaction_create(request: HttpRequest) -> HttpResponse:
 
 
 def _form_context(*, form: TransactionForm, mode: str, txn: Transaction | None = None, **extra):
+    date_value = form["date"].value()
+    if isinstance(date_value, date):
+        date_month = date_value.strftime("%Y-%m")
+    else:
+        try:
+            date_month = date.fromisoformat(str(date_value)).strftime("%Y-%m")
+        except ValueError:
+            date_month = ""
     context = {
         "form": form,
         "mode": mode,
@@ -359,6 +367,7 @@ def _form_context(*, form: TransactionForm, mode: str, txn: Transaction | None =
         "read_only": form.read_only,
         "today": today_wib(),
         "month_max": today_wib().strftime("%Y-%m"),
+        "date_month": date_month,
     }
     context.update(extra)
     return context

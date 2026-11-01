@@ -398,6 +398,30 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         row += 1
     _auto_width(ws3)
 
+    if period_type == "monthly":
+        ws_salary = wb.create_sheet("Gaji per Periode")
+        _write_header_row(
+            ws_salary,
+            1,
+            ["Periode Gaji", "Tanggal Dibayar", "Kategori", "Item", "Jumlah"],
+        )
+        row = 2
+        for salary in result.gaji or []:
+            ws_salary.cell(row=row, column=1, value=salary["periode"])
+            ws_salary.cell(
+                row=row,
+                column=2,
+                value=salary["tanggal"].strftime("%d/%m/%Y"),
+            )
+            ws_salary.cell(row=row, column=3, value=salary["kategori"])
+            ws_salary.cell(row=row, column=4, value=salary["item"])
+            cell_v = ws_salary.cell(row=row, column=5, value=salary["amount"])
+            for key, style in _number_style().items():
+                setattr(cell_v, key, style)
+            cell_v.number_format = "#,##0.00"
+            row += 1
+        _auto_width(ws_salary)
+
     # Sheet 5: Stok
     ws4 = wb.create_sheet("Stok")
     _write_header_row(ws4, 1, ["Stok" + cat_name, period_label])

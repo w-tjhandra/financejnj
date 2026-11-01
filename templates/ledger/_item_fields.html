@@ -1,4 +1,4 @@
-{% comment %}Partial field dependen item (HTMX): kategori, qty/satuan, metode bayar, bulan gaji.{% endcomment %}
+{% comment %}Partial field dependen item (HTMX): kategori, qty/satuan, metode bayar, periode gaji.{% endcomment %}
 <div>
   <label for="{{ form.category.id_for_label }}" class="label">Kategori</label>
   {{ form.category }}
@@ -67,12 +67,16 @@
   </div>
 </div>
 
-<div>
-  <label for="{{ form.period_month.id_for_label }}" class="label">Bulan gaji</label>
-  <input type="month" name="period_month" id="{{ form.period_month.id_for_label }}" class="input"
-         value="{{ form.period_month.value|default_if_none:'' }}"
-         max="{{ month_max }}" {% if read_only %}disabled{% endif %}>
-  {% if form.period_month.errors %}
-    <p role="alert" class="mt-1 text-sm text-red-700">{{ form.period_month.errors|join:" " }}</p>
-  {% endif %}
-</div>
+{% if selected_item.flow == "expense" and form.flow.value == "expense" and selected_item.frequency == "monthly" %}
+  <div>
+    <label for="{{ form.period_month.id_for_label }}" class="label">Periode gaji</label>
+    <input type="month" name="period_month" id="{{ form.period_month.id_for_label }}" class="input"
+           value="{{ form.period_month.value|default_if_none:'' }}"
+           max="{{ month_max }}" x-ref="periodMonth" {% if read_only %}disabled{% endif %}>
+    {% if form.period_month.errors %}
+      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.period_month.errors|join:" " }}</p>
+    {% else %}
+      <p class="mt-1 text-xs text-slate-500">Otomatis mengikuti bulan tanggal transaksi. Ubah bila gaji dibayarkan untuk bulan lain.</p>
+    {% endif %}
+  </div>
+{% endif %}

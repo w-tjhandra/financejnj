@@ -66,7 +66,7 @@ TRANSACTION_CORRECTION_READONLY = "Transaksi koreksi saldo awal bersifat read-on
 SALARY_DUPLICATE_BANNER = (
     "Gaji {category} {month} sudah tercatat. Perubahan akan menggantikan nilai sebelumnya."
 )
-PERIOD_INVALID = "Format bulan gaji tidak valid."
+PERIOD_INVALID = "Format periode gaji tidak valid."
 
 # --- Angka ----------------------------------------------------------------
 NUMBER_INVALID = "{field} harus berupa angka."

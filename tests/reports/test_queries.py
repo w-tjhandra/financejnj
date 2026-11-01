@@ -10,7 +10,7 @@ import pytest
 from ledger.models import Account, Transaction
 from master.models import Category, Item, StockItem
 from master.services.seed import ensure_master_data
-from reports.queries import daily_recap
+from reports.queries import daily_recap, monthly_recap
 from tests.factories import make_movement
 
 
@@ -217,3 +217,52 @@ def test_ac_20_filter_kategori(recap_setup):
     result = daily_recap(date(2026, 10, 1), date(2026, 10, 31), d["cat_doc"].pk)
     total = sum(r.amount for r in result.summary if r.key == "pengeluaran")
     assert total == Decimal("200000.00")
+
+
+def test_rekap_gaji_mengikuti_periode_bukan_tanggal_pembayaran(recap_setup):
+    d = recap_setup
+    txn = _txn(
+        date(2026, 10, 5),
+        d["account"],
+        {
+            "flow": "expense",
+            "category": d["cat_umum"],
+            "item": d["item_gaji"],
+            "amount": Decimal("100000.00"),
+            "period_month": date(2026, 9, 1),
+        },
+    )
+
+    september = monthly_recap(date(2026, 9, 1))
+    october = monthly_recap(date(2026, 10, 1))
+
+    assert september.gaji == [
+        {
+            "tanggal": txn.date,
+            "periode": "September 2026",
+            "kategori": d["cat_umum"].name,
+            "item": d["item_gaji"].name,
+            "amount": txn.amount,
+        }
+    ]
+    assert october.gaji == []
+    assert sum(row.amount for row in october.summary if row.key == "pengeluaran") == txn.amount
+
+
+def test_rekap_gaji_tetap_menghormati_filter_kategori(recap_setup):
+    d = recap_setup
+    _txn(
+        date(2026, 10, 5),
+        d["account"],
+        {
+            "flow": "expense",
+            "category": d["cat_umum"],
+            "item": d["item_gaji"],
+            "amount": Decimal("100000.00"),
+            "period_month": date(2026, 9, 1),
+        },
+    )
+
+    result = monthly_recap(date(2026, 9, 1), d["cat_layer"].pk)
+
+    assert result.gaji == []

@@ -93,13 +93,13 @@ def test_form_baru_default_tanggal_hari_ini_dan_maksimal_hari_ini(auth_client):
 
 
 def test_form_tetap_bisa_diisi_tanpa_htmx(auth_client):
-    """Fallback non-HTMX: qty, satuan, dan bulan gaji selalu ada di DOM."""
+    """Fallback non-HTMX: field qty dan satuan tetap ada; periode gaji hanya untuk gaji."""
     response = auth_client.get(reverse("transaction_create"))
 
     body = response.content.decode()
     assert 'name="qty"' in body
     assert 'name="unit"' in body
-    assert 'name="period_month"' in body
+    assert 'name="period_month"' not in body
 
 
 def test_item_options_mengikuti_arus(auth_client):
@@ -242,6 +242,34 @@ def test_ac_09_1_item_bulanan_memunculkan_bulan_gaji(auth_client):
     assert 'type="month"' in body
     assert 'name="period_month"' in body
     assert 'value="2026-10"' in body
+    assert "Periode gaji" in body
+
+
+def test_form_gaji_mengikuti_bulan_tanggal_dan_menampilkan_pembaruan_otomatis(auth_client):
+    item = Item.objects.get(code="salary")
+    response = auth_client.get(
+        reverse("transaction_create"), {"item": item.pk, "date": "2026-10-05"}
+    )
+
+    body = response.content.decode()
+    assert 'name="period_month"' in body
+    assert 'value="2026-10"' in body
+    assert 'x-data="{ dateMonth:' in body
+    assert "periodMonth.value = nextMonth" in body
+
+
+def test_item_non_gaji_tidak_memunculkan_periode_gaji(auth_client):
+    item = Item.objects.get(code="egg_sales")
+    response = auth_client.get(reverse("transaction_item_fields"), {"item": item.pk})
+
+    assert 'name="period_month"' not in response.content.decode()
+
+    salary = Item.objects.get(code="salary")
+    response = auth_client.get(
+        reverse("transaction_item_fields"),
+        {"item": salary.pk, "flow": "income"},
+    )
+    assert 'name="period_month"' not in response.content.decode()
 
 
 # --- Create ---------------------------------------------------------------

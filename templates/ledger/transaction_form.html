@@ -26,6 +26,7 @@
   <div class="card">
     <form method="post"
           action="{% if mode == 'edit' %}{% url 'transaction_update' txn.pk %}{% else %}{% url 'transaction_create' %}{% endif %}"
+          x-data="{ dateMonth: '{{ date_month|escapejs }}' }"
           novalidate>
       {% csrf_token %}
 

@@ -196,7 +196,18 @@ class TransactionForm(forms.Form):
 
     date = forms.CharField(
         label="Tanggal",
-        widget=forms.TextInput(attrs={"class": "input", "type": "date"}),
+        widget=forms.TextInput(
+            attrs={
+                "class": "input",
+                "type": "date",
+                "x-on:change": (
+                    "const nextMonth = $event.target.value.slice(0, 7); "
+                    "if ($refs.periodMonth && $refs.periodMonth.value === dateMonth) "
+                    "$refs.periodMonth.value = nextMonth; "
+                    "dateMonth = nextMonth;"
+                ),
+            }
+        ),
         error_messages={"required": "Tanggal wajib diisi."},
     )
     flow = forms.ChoiceField(
@@ -296,7 +307,7 @@ class TransactionForm(forms.Form):
     )
     period_month = forms.CharField(
         required=False,
-        label="Bulan gaji",
+        label="Periode gaji",
         widget=forms.TextInput(attrs={"class": "input", "type": "month"}),
     )
 

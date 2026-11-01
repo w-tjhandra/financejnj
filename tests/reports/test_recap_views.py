@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from core.utils.dates import today_wib
 from ledger.models import Account, AccountTransfer, Transaction
@@ -62,6 +64,36 @@ def test_ac_18_bulanan_200(completed_setup, client):
 
 
 @pytest.mark.django_db
+def test_rekap_bulanan_menampilkan_gaji_periode_terpisah_dari_tanggal_bayar(
+    completed_setup, client
+):
+    client.force_login(completed_setup)
+    account = Account.objects.get(code="cash")
+    account.opening_balance_date = date(2026, 9, 1)
+    account.save(update_fields=["opening_balance_date"])
+    item_gaji = make_item(name="Gaji Karyawan", flow="expense", frequency="monthly")
+    category = make_category(code="UMUM", name="Operasional")
+    Transaction.objects.create(
+        date=date(2026, 10, 5),
+        flow="expense",
+        category=category,
+        item=item_gaji,
+        account=account,
+        amount=Decimal("100000.00"),
+        period_month=date(2026, 9, 1),
+    )
+
+    response = client.get(reverse("reports:monthly_recap"), {"month": "2026-09"})
+
+    content = response.content.decode()
+    assert response.status_code == 200
+    assert "Gaji untuk periode September 2026" in content
+    assert "Tanggal dibayar" in content
+    assert "05/10/2026" in content
+    assert "September 2026" in content
+
+
+@pytest.mark.django_db
 def test_export_rekap_bulanan_menerima_format_bulan_dari_tautan_kunci_periode(
     completed_setup, client
 ):
@@ -74,6 +106,41 @@ def test_export_rekap_bulanan_menerima_format_bulan_dari_tautan_kunci_periode(
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     assert 'filename="rekap_bulanan_202610.xlsx"' in response["Content-Disposition"]
+
+
+@pytest.mark.django_db
+def test_export_rekap_bulanan_memisahkan_periode_gaji_dan_tanggal_bayar(
+    completed_setup, client
+):
+    client.force_login(completed_setup)
+    account = Account.objects.get(code="cash")
+    account.opening_balance_date = date(2026, 9, 1)
+    account.save(update_fields=["opening_balance_date"])
+    item_gaji = make_item(name="Gaji Karyawan", flow="expense", frequency="monthly")
+    category = make_category(code="UMUM", name="Operasional")
+    Transaction.objects.create(
+        date=date(2026, 11, 5),
+        flow="expense",
+        category=category,
+        item=item_gaji,
+        account=account,
+        amount=Decimal("100000.00"),
+        period_month=date(2026, 10, 1),
+    )
+
+    response = client.get(reverse("reports:export_monthly"), {"month": "2026-10"})
+
+    workbook = load_workbook(BytesIO(response.content), read_only=True)
+    rows = list(workbook["Gaji per Periode"].iter_rows(values_only=True))
+    assert response.status_code == 200
+    assert rows[0] == ("Periode Gaji", "Tanggal Dibayar", "Kategori", "Item", "Jumlah")
+    assert rows[1] == (
+        "Oktober 2026",
+        "05/11/2026",
+        "Operasional",
+        "Gaji Karyawan",
+        Decimal("100000.00"),
+    )
 
 
 @pytest.mark.django_db

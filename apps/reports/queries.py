@@ -518,21 +518,32 @@ def weekly_recap(week_start: date, category_ids=None) -> RecapResult:
 
 
 def monthly_recap(month_start_value: date, category_ids=None) -> RecapResult:
-    """Rekap bulanan: kalender penuh + daftar gaji (item frequency monthly)."""
+    """Rekap bulanan: transaksi berdasarkan tanggal, daftar gaji berdasarkan periodenya."""
     start = month_start(month_start_value)
     end = start.replace(day=calendar.monthrange(start.year, start.month)[1])
-    base = _base_transactions(start, end, category_ids)
     result = _recap_range(start, end, format_month_id(start), category_ids)
+    salary_transactions = Transaction.objects.filter(
+        flow="expense",
+        item__frequency="monthly",
+        period_month=start,
+    ).select_related("category", "item")
+    opening_date = Account.objects.order_by("opening_balance_date").values_list(
+        "opening_balance_date", flat=True
+    ).first()
+    if opening_date is not None:
+        salary_transactions = salary_transactions.filter(date__gte=opening_date)
+    category_pks = _category_pks(category_ids)
+    if category_pks is not None:
+        salary_transactions = salary_transactions.filter(category_id__in=category_pks)
     gaji = [
         {
-            "tanggal": row["date"],
-            "kategori": row["category__name"],
-            "item": row["item__name"],
-            "amount": row["amount"],
+            "tanggal": txn.date,
+            "periode": format_month_id(txn.period_month),
+            "kategori": txn.category.name,
+            "item": txn.item.name,
+            "amount": txn.amount,
         }
-        for row in base.filter(item__frequency="monthly")
-        .order_by("date", "id")
-        .values("date", "category__name", "item__name", "amount")
+        for txn in salary_transactions.order_by("date", "id")
     ]
     return replace(result, gaji=gaji)
 

@@ -241,19 +241,19 @@ def _validate_monthly(
         return None
 
     if period_month in (None, ""):
-        message = "Bulan gaji wajib dipilih."
+        message = "Periode gaji wajib dipilih."
         raise DomainError(message, code="period_month_required", fields={"period_month": message})
     period = _coerce_date(period_month, field="period_month")
     if period.day != 1:
-        message = "Bulan gaji harus tanggal 1."
+        message = "Periode gaji harus tanggal 1."
         raise DomainError(message, code="period_month_first", fields={"period_month": message})
 
     period = month_start(period)
     if period > month_start(value_date):
-        message = "Bulan gaji tidak boleh setelah bulan tanggal transaksi."
+        message = "Periode gaji tidak boleh setelah bulan tanggal transaksi."
         raise DomainError(message, code="period_month_after_date", fields={"period_month": message})
     if period < month_start(opening_balance_date):
-        message = "Bulan gaji tidak boleh sebelum tanggal saldo awal."
+        message = "Periode gaji tidak boleh sebelum tanggal saldo awal."
         raise DomainError(
             message, code="period_month_before_opening", fields={"period_month": message}
         )
@@ -770,7 +770,7 @@ def delete_transaction(*, transaction_id: int, actor=None, reason: str = "", met
 def duplicate_prefill(transaction_id: int) -> dict:
     """Nilai awal form tambah dari transaksi yang ada (FR-12, BR-08).
 
-    Tidak menulis DB. Tanggal = hari ini WIB; bulan gaji dihitung ulang dari
+    Tidak menulis DB. Tanggal = hari ini WIB; periode gaji dihitung ulang dari
     bulan tanggal baru. Lampiran, audit, dan jejak pembuatan tidak disalin.
     """
     txn = Transaction.objects.filter(pk=transaction_id).first()
