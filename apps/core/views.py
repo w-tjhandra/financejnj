@@ -25,6 +25,7 @@ from core.services.locks import (
     AlreadyUnlocked,
     lock_period,
     max_locked_period,
+    period_start_date,
     period_status,
     unlock_period,
 )
@@ -191,16 +192,27 @@ def period_lock_list(request: HttpRequest) -> HttpResponse:
     """Daftar status kunci periode (termasuk yang pernah dibuka)."""
     today = today_wib()
     max_locked = max_locked_period()
-    opening_date = add_months(today, -24)  # tampilkan 24 bulan mundur
-    if max_locked:
-        opening_date = min(opening_date, max_locked)
-
+    opening_period = month_start(period_start_date(today))
+    current_period = month_start(today)
+    selected_month = request.GET.get("month", "").strip()
     months = []
-    current = month_start(opening_date)
-    while current <= add_months(today, 1):
-        status = period_status(current)
-        months.append(status)
-        current = add_months(current, 1)
+    search_error = False
+
+    if selected_month:
+        try:
+            searched_period = date.fromisoformat(f"{selected_month}-01")
+        except ValueError:
+            search_error = True
+        else:
+            if opening_period <= searched_period <= current_period:
+                months.append(period_status(searched_period))
+            else:
+                search_error = True
+    else:
+        current = current_period
+        while current >= opening_period and len(months) < 12:
+            months.append(period_status(current))
+            current = add_months(current, -1)
 
     return render(
         request,
@@ -209,6 +221,9 @@ def period_lock_list(request: HttpRequest) -> HttpResponse:
             "months": months,
             "today": today,
             "max_locked": max_locked,
+            "opening_period": opening_period,
+            "selected_month": selected_month,
+            "search_error": search_error,
         },
     )
 
@@ -224,6 +239,10 @@ def period_lock_action(request: HttpRequest, period: str) -> HttpResponse:
         return redirect("period_lock_list")
 
     target = month_start(target)
+    opening_period = month_start(period_start_date(today_wib()))
+    if target < opening_period or target > month_start(today_wib()):
+        messages.error(request, "Periode berada di luar rentang operasional aplikasi.")
+        return redirect("period_lock_list")
 
     if request.method == "POST":
         action = request.POST.get("action")

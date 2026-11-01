@@ -18,6 +18,7 @@ def completed_setup(db, django_user_model):
     CompanyProfile.objects.create(
         name="Telur Jaya Farm",
         business_start_date=date(2026, 9, 1),
+        application_start_date=date(2026, 9, 1),
         setup_completed=True,
     )
     Account.objects.create(

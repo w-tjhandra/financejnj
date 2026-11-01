@@ -28,9 +28,9 @@
 
   <section class="period-lock-summary grid grid-cols-1 gap-4 mb-5 md:grid-cols-2" aria-label="Ringkasan periode">
     <article class="card period-lock-summary-card">
-      <span>Awal rentang daftar</span>
-      <strong>{{ months.0.period|date:"F Y" }}</strong>
-      <small>Daftar menampilkan periode hingga bulan berikutnya.</small>
+      <span>Riwayat sejak</span>
+      <strong>{{ opening_period|date:"F Y" }}</strong>
+      <small>Daftar bertambah otomatis hingga bulan berjalan.</small>
     </article>
     <article class="card period-lock-summary-card">
       <span>Kunci terakhir</span>
@@ -39,10 +39,26 @@
     </article>
   </section>
 
+  <form method="get" class="card mb-5 p-4 sm:p-5">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div class="sm:max-w-xs">
+        <label for="id_period_month" class="label">Cari bulan</label>
+        <input type="month" name="month" id="id_period_month" value="{{ selected_month }}" class="input w-full">
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="btn">Cari periode</button>
+        <a href="{% url 'period_lock_list' %}" class="btn btn-secondary">Reset</a>
+      </div>
+    </div>
+    {% if search_error %}
+      <p role="alert" class="mt-3 text-sm text-red-700">Periode tidak ditemukan dalam rentang operasional aplikasi.</p>
+    {% endif %}
+  </form>
+
   <section class="card period-lock-table-card overflow-hidden p-0" aria-label="Daftar status periode">
     <div class="period-lock-table-heading border-b border-slate-200 px-4 py-4 sm:px-6">
       <h2 class="font-semibold text-slate-900">Status per bulan</h2>
-      <p class="mt-1 text-sm text-slate-500">Gunakan tombol di kolom aksi untuk mengunci atau membuka periode.</p>
+      <p class="mt-1 text-sm text-slate-500">Tampilkan 12 bulan terbaru atau cari bulan lain. Rekap periode terkunci tetap bisa dibuka dan diekspor.</p>
     </div>
     <div class="table-scroll">
       <table class="data-table period-lock-table">
@@ -55,6 +71,7 @@
             <th>Alasan pembukaan</th>
             <th class="text-right">Dibuka</th>
             <th>Rantai kunci</th>
+            <th>Rekap</th>
             <th>Aksi</th>
           </tr>
         </thead>
@@ -97,6 +114,11 @@
               {% endif %}
             </td>
             <td>
+              <a href="{% url 'reports:monthly_recap' %}?month={{ m.period|date:'Y-m-d' }}" class="btn btn-sm btn-secondary">
+                Lihat rekap
+              </a>
+            </td>
+            <td>
               <a href="{% url 'period_lock_action' m.period|date:'Y-m' %}" class="btn btn-sm {% if m.is_locked %}btn-secondary{% else %}btn-primary{% endif %}">
                 {% if m.is_locked %}Buka kunci{% else %}Kunci{% endif %}
               </a>
@@ -104,7 +126,9 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="table-empty-state">Belum ada periode untuk ditampilkan.</td>
+            <td colspan="9" class="table-empty-state">
+              {% if search_error %}Tidak ada periode yang cocok dengan pencarian.{% else %}Belum ada periode untuk ditampilkan.{% endif %}
+            </td>
           </tr>
           {% endfor %}
         </tbody>

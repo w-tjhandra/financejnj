@@ -61,9 +61,25 @@ def test_ac_17_mingguan_200(completed_setup, client):
 @pytest.mark.django_db
 def test_ac_18_bulanan_200(completed_setup, client):
     client.force_login(completed_setup)
-    resp = client.get(reverse("reports:monthly_recap"))
+    resp = client.get(reverse("reports:monthly_recap"), {"month": "2026-10"})
     assert resp.status_code == 200
     assert "Ringkasan Bulan" in resp.content.decode()
+    assert resp.context["month"] == "2026-10"
+
+
+@pytest.mark.django_db
+def test_export_rekap_bulanan_menerima_format_bulan_dari_tautan_kunci_periode(
+    completed_setup, client
+):
+    client.force_login(completed_setup)
+
+    response = client.get(reverse("reports:export_monthly"), {"month": "2026-10"})
+
+    assert response.status_code == 200
+    assert response["Content-Type"] == (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert 'filename="rekap_bulanan_202610.xlsx"' in response["Content-Disposition"]
 
 
 @pytest.mark.django_db

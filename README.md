@@ -82,6 +82,22 @@ docker compose --env-file .env -f docker-compose.prod.yml ps
 docker compose --env-file .env -f docker-compose.prod.yml logs -f app
 ```
 
+Di produksi, service `period-locker` memeriksa penutupan periode setiap menit.
+Pada tanggal 1 setelah pukul 00.05 WIB, service mengunci bulan sebelumnya.
+Jika service baru pulih setelah tanggal 1, ia mengejar penguncian yang tertunda.
+Periode yang sudah dikunci dapat dibuka kembali melalui aplikasi dengan alasan
+yang tercatat di audit. Jika urutan kunci belum lengkap, periode tidak dikunci
+paksa; periksa log service dan selesaikan periode yang tertinggal:
+
+```bash
+docker compose --env-file .env -f docker-compose.prod.yml logs -f period-locker
+```
+
+Tanggal mulai penggunaan aplikasi diisi terpisah dari tanggal mulai usaha.
+Kunci Periode menampilkan 12 bulan terbaru sampai bulan berjalan; gunakan
+pencarian bulan untuk membuka riwayat lain dan tautan rekap untuk melihat atau
+mengekspor XLSX.
+
 Port publik 80/443 tetap dikelola web server yang sudah ada di host. Caddy
 container hanya bind ke `127.0.0.1:8080` (atau nilai `PROXY_PORT` di `.env`)
 dan melayani HTTP di belakang reverse proxy tersebut. Untuk Nginx, konfigurasi

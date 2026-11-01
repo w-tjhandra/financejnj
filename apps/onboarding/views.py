@@ -17,7 +17,7 @@ from django.views.decorators.http import require_http_methods
 
 from core.models import CompanyProfile
 from core.services.setup_state import SETUP_DRAFT_KEY, SetupStep, resolve_setup_step, step_url
-from core.utils.dates import format_date_long_id, format_date_short
+from core.utils.dates import format_date_long_id, format_date_short, today_wib
 from core.utils.numbers import format_id_number, format_money, format_qty
 from ledger.models import Account
 from onboarding.errors import SetupIncomplete
@@ -137,11 +137,15 @@ def step_profile(request: HttpRequest) -> HttpResponse:
     if step is not SetupStep.PROFILE:
         return redirect(step_url(step))
 
-    form = ProfileSetupForm(request.POST or None)
+    form = ProfileSetupForm(
+        request.POST or None,
+        initial={"application_start_date": today_wib().isoformat()},
+    )
     if request.method == "POST" and form.is_valid():
         CompanyProfile.objects.create(
             name=form.cleaned_data["name"],
             business_start_date=form.cleaned_data["business_start_date"],
+            application_start_date=form.cleaned_data["application_start_date"],
             setup_completed=False,
         )
         return redirect("setup_balance")

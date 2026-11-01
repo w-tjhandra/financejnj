@@ -41,8 +41,15 @@ def post_account(client, *, username="pemilik", password=PASSWORD, confirm=None,
     return client.post(reverse("setup_account"), data)
 
 
-def post_profile(client, *, name="Telur Jaya Farm", start=START_ISO):
-    return client.post(reverse("setup_profile"), {"name": name, "business_start_date": start})
+def post_profile(client, *, name="Telur Jaya Farm", start=START_ISO, app_start=None):
+    return client.post(
+        reverse("setup_profile"),
+        {
+            "name": name,
+            "business_start_date": start,
+            "application_start_date": app_start or TODAY.isoformat(),
+        },
+    )
 
 
 def post_balance(client, *, amount="250.000.000", value_date=START_ISO):
@@ -171,6 +178,18 @@ def test_langkah_1_membuat_user_dan_login(client):
     assert user.check_password(PASSWORD)
     assert user.first_name == "Pemilik"
     assert client.session["_auth_user_id"] == str(user.pk)
+
+
+@pytest.mark.django_db
+def test_tanggal_mulai_aplikasi_disimpan_terpisah_dari_tanggal_mulai_usaha(client):
+    post_account(client)
+
+    response = post_profile(client, start=START_ISO, app_start="2026-11-01")
+
+    assert response.status_code == 302
+    profile = CompanyProfile.objects.get()
+    assert profile.business_start_date == START
+    assert profile.application_start_date.isoformat() == "2026-11-01"
 
 
 # --- AC-02.6 / guard -------------------------------------------------------

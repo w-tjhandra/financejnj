@@ -35,6 +35,15 @@ def _parse_date(value: str | None) -> date | None:
         return None
 
 
+def _parse_month(value: str | None) -> date | None:
+    if not value:
+        return None
+    raw = value.strip()
+    if len(raw) == 7:
+        raw = f"{raw}-01"
+    return _parse_date(raw)
+
+
 def _category_id(request: HttpRequest) -> int | None:
     raw = request.GET.get("category") or ""
     return int(raw) if raw.isdigit() else None
@@ -204,7 +213,7 @@ def weekly_recap_view(request: HttpRequest) -> HttpResponse:
 @require_GET
 def monthly_recap_view(request: HttpRequest) -> HttpResponse:
     """S-12: Rekap bulanan (empat baris + gaji)."""
-    anchor = _parse_date(request.GET.get("month")) or today_wib()
+    anchor = _parse_month(request.GET.get("month")) or today_wib()
     result = monthly_recap(anchor, _category_id(request))
     return render(
         request,
@@ -213,7 +222,7 @@ def monthly_recap_view(request: HttpRequest) -> HttpResponse:
             "result": result,
             "categories": Category.objects.filter(is_active=True).order_by("sort_order", "id"),
             "selected_category": _category_id(request),
-            "month": month_start(anchor).isoformat(),
+            "month": month_start(anchor).strftime("%Y-%m"),
             "FLOW_LABELS": FLOW_LABELS,
         },
     )
@@ -264,7 +273,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         filename = f"rekap_mingguan_{start:%Y%m%d}.xlsx"
         period_label = f"Minggu {start:%d/%m/%Y} – {(start.replace(day=start.day + 6)):%d/%m/%Y}"
     elif period_type == "monthly":
-        anchor = _parse_date(request.GET.get("month")) or today
+        anchor = _parse_month(request.GET.get("month")) or today
         result = monthly_recap(anchor, category_id)
         filename = f"rekap_bulanan_{anchor:%Y%m}.xlsx"
         period_label = f"Bulan {anchor:%m/%Y}"

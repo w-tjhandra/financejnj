@@ -97,13 +97,19 @@ class LockStatus:
         return not self.is_locked and self.unlocked_at is not None
 
 
-def _opening_balance_date(fallback: date) -> date:
-    """Tanggal saldo awal dari app ledger tanpa melanggar arah dependensi."""
+def period_start_date(fallback: date) -> date:
+    """Bulan pertama yang dapat dikunci, setelah aplikasi dan saldo awal siap."""
     account_model = apps.get_model("ledger", "Account")
-    value = (
+    opening_date = (
         account_model.objects.order_by("pk").values_list("opening_balance_date", flat=True).first()
     )
-    return value or fallback
+    profile_model = apps.get_model("core", "CompanyProfile")
+    application_start = (
+        profile_model.objects.order_by("pk")
+        .values_list("application_start_date", flat=True)
+        .first()
+    )
+    return max(opening_date or fallback, application_start or fallback)
 
 
 def _locked_periods() -> list[date]:
@@ -161,7 +167,7 @@ def period_status(period: date) -> LockStatus:
     gap = chain_gap(
         period,
         locked_periods=locked,
-        opening_balance_date=_opening_balance_date(period),
+        opening_balance_date=period_start_date(period),
     )
     if row is None:
         return LockStatus(period=period, is_locked=False, chain_gap=gap)
@@ -178,7 +184,7 @@ def period_status(period: date) -> LockStatus:
     )
 
 
-def lock_period(period: date, actor=None, meta=None) -> PeriodLock:
+def lock_period(period: date, actor=None, meta=None, *, source: str | None = None) -> PeriodLock:
     """Kunci satu bulan; rantai wajib lengkap tanpa lubang (AC-30.7)."""
     period = month_start(period)
     with transaction.atomic():
@@ -190,7 +196,7 @@ def lock_period(period: date, actor=None, meta=None) -> PeriodLock:
         gap = chain_gap(
             period,
             locked_periods=locked,
-            opening_balance_date=_opening_balance_date(period),
+            opening_balance_date=period_start_date(period),
         )
         if gap is not None:
             message = messages.chain_gap(gap)
@@ -212,17 +218,21 @@ def lock_period(period: date, actor=None, meta=None) -> PeriodLock:
         row.save()
 
         transactions, movements = _period_counts(period)
+        extra = {
+            "period": period_key(period),
+            "transactions": transactions,
+            "movements": movements,
+        }
+        if source:
+            extra["source"] = source
+
         _audit(
             row.pk,
             "lock",
             actor=actor,
             before=before,
             after=_snapshot(row),
-            extra={
-                "period": period_key(period),
-                "transactions": transactions,
-                "movements": movements,
-            },
+            extra=extra,
             meta=meta,
         )
         return row

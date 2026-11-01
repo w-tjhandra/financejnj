@@ -62,6 +62,35 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  period-locker:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
+      DJANGO_DEBUG: "0"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in .env}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-1}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-31536000}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_HOST: ${POSTGRES_HOST:?Set POSTGRES_HOST in .env}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      TZ: Asia/Jakarta
+    command:
+      - python
+      - manage.py
+      - auto_lock_previous_period
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - telur-network
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped

@@ -78,6 +78,7 @@ class CompanyProfile(TimeStampedModel):
     email = models.EmailField(max_length=254, blank=True, default="")
     logo = models.CharField(max_length=255, null=True, blank=True)
     business_start_date = models.DateField(null=True, blank=True)
+    application_start_date = models.DateField(default=timezone.localdate)
     setup_completed = models.BooleanField(default=False)
 
     class Meta:

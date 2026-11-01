@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from audit.models import AuditLog
 from core import messages
 from core.errors import AlreadyLocked, AlreadyUnlocked, DomainError, PeriodLocked
-from core.models import PeriodLock
+from core.models import CompanyProfile, PeriodLock
 from core.services.locks import (
     assert_date_editable,
     lock_period,
+    period_start_date,
     period_status,
     unlock_period,
 )
+from core.services.period_auto_lock import maybe_auto_lock_previous_period
 from ledger.models import Account
 from tests.factories import make_item, make_movement, make_stock_item, make_transaction
 
@@ -190,3 +193,60 @@ def test_movement_terhapus_tidak_dihitung_di_audit_lock(completed_setup):
 
     audit = AuditLog.objects.get(entity="period_lock", action="lock")
     assert audit.extra["movements"] == 0
+
+
+@pytest.mark.django_db
+def test_auto_lock_menutup_bulan_lalu_setelah_pukul_0005_dan_tidak_mengunci_ulang(
+    completed_setup,
+):
+    lock_period(SEPTEMBER, actor=completed_setup)
+    lock_period(OCTOBER, actor=completed_setup)
+    sebelum_jadwal = datetime(2026, 12, 1, 0, 4, tzinfo=ZoneInfo("Asia/Jakarta"))
+    jadwal = datetime(2026, 12, 1, 0, 5, tzinfo=ZoneInfo("Asia/Jakarta"))
+
+    assert maybe_auto_lock_previous_period(sebelum_jadwal) is None
+    row = maybe_auto_lock_previous_period(jadwal)
+
+    assert row is not None
+    assert row.period == date(2026, 11, 1)
+    audit = AuditLog.objects.get(entity="period_lock", entity_id=row.pk, action="lock")
+    assert audit.extra["source"] == "automatic"
+
+    unlock_period(row.period, REASON, actor=completed_setup)
+    assert maybe_auto_lock_previous_period(jadwal) is None
+    assert PeriodLock.objects.get(period=row.period).is_locked is False
+
+
+@pytest.mark.django_db
+def test_auto_lock_tidak_melewati_rantai_yang_belum_lengkap(completed_setup):
+    lock_period(SEPTEMBER, actor=completed_setup)
+    jadwal = datetime(2026, 12, 1, 0, 5, tzinfo=ZoneInfo("Asia/Jakarta"))
+
+    with pytest.raises(DomainError):
+        maybe_auto_lock_previous_period(jadwal)
+
+    assert not PeriodLock.objects.filter(period=OCTOBER).exists()
+
+
+@pytest.mark.django_db
+def test_awal_rantai_penguncian_mengikuti_go_live_bukan_saldo_awal(completed_setup):
+    profile = CompanyProfile.objects.get()
+    profile.application_start_date = date(2026, 11, 1)
+    profile.save(update_fields=["application_start_date"])
+
+    assert period_start_date(date(2026, 12, 1)) == date(2026, 11, 1)
+    row = lock_period(date(2026, 11, 1), actor=completed_setup)
+
+    assert row.period == date(2026, 11, 1)
+
+
+@pytest.mark.django_db
+def test_auto_lock_mengejar_periode_bila_service_pulih_setelah_tanggal_satu(completed_setup):
+    lock_period(SEPTEMBER, actor=completed_setup)
+    lock_period(OCTOBER, actor=completed_setup)
+    service_pulih = datetime(2026, 12, 2, 8, 0, tzinfo=ZoneInfo("Asia/Jakarta"))
+
+    row = maybe_auto_lock_previous_period(service_pulih)
+
+    assert row is not None
+    assert row.period == date(2026, 11, 1)

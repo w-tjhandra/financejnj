@@ -98,6 +98,11 @@ class ProfileSetupForm(forms.Form):
         label="Tanggal mulai usaha",
         widget=forms.DateInput(attrs={"class": "input", "type": "date"}),
     )
+    application_start_date = forms.CharField(
+        required=False,
+        label="Tanggal mulai menggunakan aplikasi",
+        widget=forms.DateInput(attrs={"class": "input", "type": "date"}),
+    )
 
     def clean_name(self) -> str:
         name = (self.cleaned_data["name"] or "").strip()
@@ -113,6 +118,10 @@ class ProfileSetupForm(forms.Form):
         if value > today_wib():
             raise ValidationError(setup_messages.BUSINESS_START_AFTER_TODAY)
         return value
+
+    def clean_application_start_date(self):
+        raw = self.cleaned_data.get("application_start_date")
+        return _parse_date(raw) if raw else today_wib()
 
 
 class BalanceSetupForm(forms.Form):
