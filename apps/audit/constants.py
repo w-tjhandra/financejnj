@@ -7,6 +7,7 @@ ENTITY_VALUES = (
     "category",
     "stock_item",
     "account",
+    "account_transfer",
     "period_lock",
     "attachment",
     "company_profile",

@@ -20,6 +20,7 @@ from core.utils.dates import format_month_id, month_start, today_wib
 from core.utils.numbers import format_money
 from core.utils.periods import week
 from ledger.models import Account, Transaction
+from ledger.services.accounts import account_balances_at
 from master.models import Category
 from reports.queries import daily_recap, monthly_recap, weekly_recap, yearly_recap
 
@@ -106,8 +107,10 @@ def dashboard(request: HttpRequest) -> HttpResponse:
     """S-10…S-13: Halaman dashboard ringkasan."""
     today = today_wib()
     month = month_start(today)
-    account = Account.current()
-    reporting_start = max(month, account.opening_balance_date) if account else month
+    opening_date = Account.objects.order_by("opening_balance_date").values_list(
+        "opening_balance_date", flat=True
+    ).first()
+    reporting_start = max(month, opening_date) if opening_date else month
     transactions = Transaction.objects.filter(
         date__gte=reporting_start,
         date__lte=today,
@@ -145,6 +148,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         "labels": [row["category__name"] for row in expense_categories],
         "values": [float(row["amount"]) for row in expense_categories],
     }
+    account_balances = account_balances_at(today)
+    total_balance = sum((row["balance"] for row in account_balances), Decimal("0"))
     return render(
         request,
         "reports/dashboard.html",
@@ -158,6 +163,8 @@ def dashboard(request: HttpRequest) -> HttpResponse:
             "cashflow_chart": cashflow_chart,
             "category_chart": category_chart,
             "expense_category_count": len(expense_categories),
+            "account_balances": account_balances,
+            "total_balance_display": format_money(total_balance),
         },
     )
 
@@ -316,7 +323,50 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         row += 1
     _auto_width(ws1)
 
-    # Sheet 2: Pemasukan
+    # Sheet 2: Saldo per Sumber
+    ws_accounts = wb.create_sheet("Saldo per Sumber")
+    _write_header_row(
+        ws_accounts,
+        1,
+        [
+            "Sumber",
+            "Saldo Awal",
+            "Transaksi Masuk",
+            "Transaksi Keluar",
+            "Pindah Masuk",
+            "Pindah Keluar",
+            "Saldo Akhir",
+        ],
+    )
+    row = 2
+    for account in result.accounts:
+        ws_accounts.cell(row=row, column=1, value=account["name"])
+        values = [
+            account["opening"],
+            account["transaction_in"],
+            account["transaction_out"],
+            account["transfer_in"],
+            account["transfer_out"],
+            account["closing"],
+        ]
+        for column, value in enumerate(values, 2):
+            cell = ws_accounts.cell(row=row, column=column, value=value)
+            for key, style in _number_style().items():
+                setattr(cell, key, style)
+            cell.number_format = "#,##0.00"
+        row += 1
+    ws_accounts.cell(row=row, column=1, value="Total gabungan")
+    for column, key in enumerate(
+        ("opening", "transaction_in", "transaction_out", "transfer_in", "transfer_out", "closing"),
+        2,
+    ):
+        cell = ws_accounts.cell(row=row, column=column, value=result.account_total[key])
+        for style_key, style in _number_style().items():
+            setattr(cell, style_key, style)
+        cell.number_format = "#,##0.00"
+    _auto_width(ws_accounts)
+
+    # Sheet 3: Pemasukan
     ws2 = wb.create_sheet("Pemasukan")
     _write_header_row(ws2, 1, ["Pemasukan" + cat_name, period_label])
     ws2.merge_cells("A1:C1")
@@ -332,7 +382,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         row += 1
     _auto_width(ws2)
 
-    # Sheet 3: Pengeluaran
+    # Sheet 4: Pengeluaran
     ws3 = wb.create_sheet("Pengeluaran")
     _write_header_row(ws3, 1, ["Pengeluaran" + cat_name, period_label])
     ws3.merge_cells("A1:C1")
@@ -348,7 +398,7 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         row += 1
     _auto_width(ws3)
 
-    # Sheet 4: Stok
+    # Sheet 5: Stok
     ws4 = wb.create_sheet("Stok")
     _write_header_row(ws4, 1, ["Stok" + cat_name, period_label])
     ws4.merge_cells("A1:F1")
@@ -371,37 +421,62 @@ def _export_recap_xlsx(request: HttpRequest, period_type: str) -> HttpResponse:
         row += 1
     _auto_width(ws4)
 
-    # Sheet 5: Detail Transaksi
+    # Sheet 6: Detail Transaksi
     ws5 = wb.create_sheet("Detail Transaksi")
     _write_header_row(ws5, 1, ["Detail Transaksi" + cat_name, period_label])
-    ws5.merge_cells("A1:I1")
+    ws5.merge_cells("A1:L1")
     _write_header_row(
         ws5,
         2,
-        ["Tanggal", "Kategori", "Item", "Jenis", "Jumlah", "Qty", "Satuan", "Metode", "Bank"],
+        [
+            "Tanggal",
+            "Kategori",
+            "Item",
+            "Arus",
+            "Sumber",
+            "Jumlah",
+            "Qty",
+            "Satuan",
+            "Metode",
+            "Bank",
+            "Saldo Sumber",
+            "Saldo Total",
+        ],
     )
     row = 3
     for detail in result.detail:
         ws5.cell(row=row, column=1, value=detail["tanggal"].strftime("%d/%m/%Y"))
         ws5.cell(row=row, column=2, value=detail["kategori"])
         ws5.cell(row=row, column=3, value=detail["item"])
-        ws5.cell(
-            row=row,
-            column=4,
-            value="Pemasukan" if detail["flow"] == "income" else "Pengeluaran",
-        )
-        cell_amt = ws5.cell(row=row, column=5, value=detail["amount"])
+        flow_label = {
+            "income": "Pemasukan",
+            "expense": "Pengeluaran",
+            "transfer": "Pindah dana",
+        }[detail["flow"]]
+        ws5.cell(row=row, column=4, value=flow_label)
+        ws5.cell(row=row, column=5, value=detail["account_name"])
+        cell_amt = ws5.cell(row=row, column=6, value=detail["amount"])
         for k, v in _number_style().items():
             setattr(cell_amt, k, v)
         cell_amt.number_format = "#,##0.00"
         if detail["qty"] is not None:
-            cell_qty = ws5.cell(row=row, column=6, value=detail["qty"])
+            cell_qty = ws5.cell(row=row, column=7, value=detail["qty"])
             for k, v in _number_style().items():
                 setattr(cell_qty, k, v)
             cell_qty.number_format = "#,##0.000"
-        ws5.cell(row=row, column=7, value=detail["unit"] or "")
-        ws5.cell(row=row, column=8, value=PAYMENT_LABELS.get(detail["payment_method"], ""))
-        ws5.cell(row=row, column=9, value=BANK_LABELS.get(detail["transfer_bank"], ""))
+        ws5.cell(row=row, column=8, value=detail["unit"] or "")
+        method_label = PAYMENT_LABELS.get(detail["payment_method"], "")
+        if detail.get("entry_type") == "transfer":
+            method_label = f"Pindah ke {detail['transfer_to']}"
+        elif detail.get("needs_account_review"):
+            method_label = "Perlu ditinjau"
+        ws5.cell(row=row, column=9, value=method_label)
+        ws5.cell(row=row, column=10, value=BANK_LABELS.get(detail["transfer_bank"], ""))
+        for column, value in ((11, detail["saldo_sumber"]), (12, detail["saldo_kas"])):
+            cell = ws5.cell(row=row, column=column, value=value)
+            for key, style in _number_style().items():
+                setattr(cell, key, style)
+            cell.number_format = "#,##0.00"
         row += 1
     _auto_width(ws5)
 

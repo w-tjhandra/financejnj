@@ -25,7 +25,7 @@ def seeded(completed_setup):
 
 
 def _lock_cash(user) -> Account:
-    account = Account.objects.get()
+    account = Account.objects.get(code="cash")
     make_transaction(
         item=Item.objects.get(code="medicine"),
         account=account,
@@ -96,7 +96,7 @@ def test_ac_07_4_dan_07_8_mutasi_non_operasional_neto(seeded):
     assert corrections.count() == 2
     assert net == Decimal("6000000.00")
     # Koreksi tidak pernah mengubah saldo awal tersimpan.
-    assert Account.objects.get().opening_balance == Decimal("250000000.00")
+    assert Account.objects.get(code="cash").opening_balance == Decimal("250000000.00")
 
 
 def test_ac_07_5_alasan_minimal_10_karakter(seeded):
@@ -129,4 +129,4 @@ def test_ac_30_9_koreksi_ditolak_saat_periode_saldo_awal_terkunci(seeded):
         )
 
     assert not Transaction.objects.filter(is_opening_correction=True).exists()
-    assert Account.objects.get().opening_balance == Decimal("250000000.00")
+    assert Account.objects.get(code="cash").opening_balance == Decimal("250000000.00")

@@ -13,7 +13,7 @@ from core import messages
 from core.errors import DomainError
 from core.utils.dates import month_start, today_wib
 from core.utils.numbers import format_id_number, format_money, parse_id_number
-from ledger.models import TRANSFER_BANK_CHOICES
+from ledger.models import ACCOUNT_CHOICES, TRANSFER_BANK_CHOICES, Account
 from ledger.services.opening import MONEY_MAX, REASON_MAX, REASON_MIN
 from ledger.services.transactions import QTY_MAX
 from master.models import FLOW_CHOICES, PAYMENT_METHOD_CHOICES, Category, Item
@@ -74,6 +74,117 @@ class OpeningBalanceForm(forms.Form):
         if self.business_start_date is not None and value < self.business_start_date:
             raise ValidationError(messages.date_before_business_start(self.business_start_date))
         return value
+
+
+class MultiAccountOpeningBalanceForm(forms.Form):
+    opening_balance_date = forms.CharField(
+        label="Tanggal saldo awal",
+        widget=forms.DateInput(attrs={"class": "input", "type": "date"}),
+    )
+
+    def __init__(self, *args, business_start_date: date | None = None, **kwargs) -> None:
+        self.business_start_date = business_start_date
+        super().__init__(*args, **kwargs)
+        for code, label in ACCOUNT_CHOICES:
+            self.fields[f"opening_balance_{code}"] = forms.CharField(
+                label=f"Saldo awal {label} (Rp)",
+                widget=forms.TextInput(
+                    attrs={"class": "input", "inputmode": "decimal", "autocomplete": "off"}
+                ),
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        for code, label in ACCOUNT_CHOICES:
+            field = f"opening_balance_{code}"
+            if field not in cleaned:
+                continue
+            try:
+                cleaned[field] = parse_id_number(
+                    cleaned[field],
+                    places=2,
+                    field=f"Saldo awal {label}",
+                    min_value=Decimal("0"),
+                    max_value=MONEY_MAX,
+                )
+            except DomainError as exc:
+                self.add_error(field, exc.message)
+        raw_date = cleaned.get("opening_balance_date")
+        if raw_date:
+            try:
+                value_date = date.fromisoformat(raw_date)
+            except (TypeError, ValueError):
+                self.add_error("opening_balance_date", messages.DATE_INVALID)
+            else:
+                if value_date > today_wib():
+                    self.add_error("opening_balance_date", messages.DATE_AFTER_TODAY)
+                elif (
+                    self.business_start_date is not None
+                    and value_date < self.business_start_date
+                ):
+                    self.add_error(
+                        "opening_balance_date",
+                        messages.date_before_business_start(self.business_start_date),
+                    )
+                else:
+                    cleaned["opening_balance_date"] = value_date
+        return cleaned
+
+
+class AccountTransferForm(forms.Form):
+    date = forms.DateField(
+        label="Tanggal",
+        widget=forms.DateInput(attrs={"class": "input", "type": "date"}),
+    )
+    from_account = forms.ModelChoiceField(
+        label="Dari sumber",
+        queryset=Account.objects.none(),
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    to_account = forms.ModelChoiceField(
+        label="Ke sumber",
+        queryset=Account.objects.none(),
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+    amount = forms.CharField(
+        label="Nominal (Rp)",
+        widget=forms.TextInput(
+            attrs={"class": "input", "inputmode": "decimal", "autocomplete": "off"}
+        ),
+    )
+    notes = forms.CharField(
+        label="Keterangan",
+        required=False,
+        max_length=500,
+        widget=forms.TextInput(attrs={"class": "input", "autocomplete": "off"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        accounts = Account.objects.filter(is_active=True, code__isnull=False).order_by("id")
+        self.fields["from_account"].queryset = accounts
+        self.fields["to_account"].queryset = accounts
+
+    def clean_amount(self) -> Decimal:
+        try:
+            return parse_id_number(
+                self.cleaned_data["amount"],
+                places=2,
+                field="Nominal",
+                min_value=Decimal("0.01"),
+                max_value=MONEY_MAX,
+            )
+        except DomainError as exc:
+            raise ValidationError(exc.message) from exc
+
+    def clean_notes(self) -> str:
+        return (self.cleaned_data.get("notes") or "").strip()
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("from_account") == cleaned.get("to_account"):
+            self.add_error("to_account", "Pilih sumber uang yang berbeda.")
+        return cleaned
 
 
 class TransactionForm(forms.Form):
@@ -394,6 +505,12 @@ class OpeningCorrectionForm(forms.Form):
         label="Tanggal",
         widget=forms.DateInput(attrs={"class": "input", "type": "date", "readonly": True}),
     )
+    account_code = forms.ChoiceField(
+        required=False,
+        choices=ACCOUNT_CHOICES,
+        label="Sumber uang",
+        widget=forms.Select(attrs={"class": "input"}),
+    )
     flow = forms.ChoiceField(
         choices=FLOW_CHOICES_FORM,
         label="Arus",
@@ -429,9 +546,16 @@ class OpeningCorrectionForm(forms.Form):
         },
     )
 
-    def __init__(self, *args, opening_balance_date: date | None = None, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        opening_balance_date: date | None = None,
+        account_code: str = "cash",
+        **kwargs,
+    ) -> None:
         self.opening_balance_date = opening_balance_date
         initial = dict(kwargs.pop("initial", None) or {})
+        initial.setdefault("account_code", account_code)
         if opening_balance_date is not None:
             initial.setdefault("date", opening_balance_date.isoformat())
         super().__init__(*args, initial=initial, **kwargs)
@@ -460,3 +584,6 @@ class OpeningCorrectionForm(forms.Form):
 
     def clean_reason(self) -> str:
         return (self.cleaned_data.get("reason") or "").strip()
+
+    def clean_account_code(self) -> str:
+        return self.cleaned_data.get("account_code") or "cash"

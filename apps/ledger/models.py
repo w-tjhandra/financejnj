@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 
 from core.models import SoftDeleteModel, TimeStampedModel
 from master.models import Category, Item
@@ -19,6 +19,12 @@ TRANSFER_BANK_CHOICES = [
     ("ibk", "IBK"),
 ]
 TRANSFER_BANK_VALUES = [value for value, _label in TRANSFER_BANK_CHOICES]
+ACCOUNT_CHOICES = [
+    ("bca", "BCA"),
+    ("mandiri", "Mandiri"),
+    ("ibk", "IBK"),
+    ("cash", "Tunai"),
+]
 ATTACHMENT_MIME_TYPES = [
     "image/jpeg",
     "image/png",
@@ -30,6 +36,9 @@ ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
 
 class Account(TimeStampedModel):
     name = models.CharField(max_length=100, default="Kas Utama")
+    code = models.CharField(
+        max_length=10, choices=ACCOUNT_CHOICES, unique=True, null=True, blank=True
+    )
     type = models.CharField(max_length=20, default="cash")
     currency = models.CharField(max_length=3, default="IDR")
     opening_balance = models.DecimalField(max_digits=18, decimal_places=2, default=0)
@@ -56,7 +65,14 @@ class Account(TimeStampedModel):
 
     @classmethod
     def current(cls):
-        return cls.objects.filter(is_active=True).order_by("id").first()
+        return (
+            cls.objects.filter(is_active=True, code="cash").first()
+            or cls.objects.filter(is_active=True).order_by("id").first()
+        )
+
+    @classmethod
+    def by_code(cls, code: str):
+        return cls.objects.filter(is_active=True, code=code).first()
 
 
 class Transaction(SoftDeleteModel):
@@ -73,6 +89,7 @@ class Transaction(SoftDeleteModel):
     transfer_bank = models.CharField(
         max_length=10, choices=TRANSFER_BANK_CHOICES, null=True, blank=True
     )
+    needs_account_review = models.BooleanField(default=False)
     notes = models.CharField(max_length=500, blank=True, default="")
     period_month = models.DateField(null=True, blank=True)
     is_opening_correction = models.BooleanField(default=False)
@@ -156,8 +173,41 @@ class Transaction(SoftDeleteModel):
             ),
         ]
 
+
+class AccountTransfer(SoftDeleteModel):
+    date = models.DateField()
+    from_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, related_name="transfers_out"
+    )
+    to_account = models.ForeignKey(
+        Account, on_delete=models.PROTECT, related_name="transfers_in"
+    )
+    amount = models.DecimalField(max_digits=18, decimal_places=2)
+    notes = models.CharField(max_length=500, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="account_transfers_created",
+    )
+
+    class Meta:
+        ordering = ["-date", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_account=F("to_account")),
+                name="account_transfer_distinct_accounts",
+            ),
+            models.CheckConstraint(
+                condition=Q(amount__gt=0) & Q(amount__lte=100_000_000_000),
+                name="account_transfer_amount_range",
+            ),
+        ]
+        indexes = [models.Index(fields=["date"], name="acct_transfer_date_idx")]
+
     def __str__(self):
-        return f"{self.date} {self.flow} {self.amount}"
+        return f"{self.date} {self.from_account} ke {self.to_account}: {self.amount}"
 
 
 class Attachment(SoftDeleteModel):

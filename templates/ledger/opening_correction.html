@@ -48,6 +48,14 @@
       </div>
 
       <div>
+        <label for="{{ form.account_code.id_for_label }}" class="label">Sumber uang yang dikoreksi</label>
+        {{ form.account_code }}
+        {% if form.account_code.errors %}
+          <p role="alert" class="mt-1 text-sm text-red-700">{{ form.account_code.errors|join:" " }}</p>
+        {% endif %}
+      </div>
+
+      <div>
         <label for="{{ form.flow.id_for_label }}" class="label">Arus</label>
         {{ form.flow }}
         {% if form.flow.errors %}

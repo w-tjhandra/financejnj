@@ -14,6 +14,7 @@ from core import messages as core_messages
 from core.errors import DomainError
 from core.utils.dates import today_wib
 from core.utils.numbers import parse_id_number
+from ledger.models import ACCOUNT_CHOICES
 from onboarding.services import messages as setup_messages
 
 USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.]+$")
@@ -125,10 +126,6 @@ class ProfileSetupForm(forms.Form):
 
 
 class BalanceSetupForm(forms.Form):
-    opening_balance = forms.CharField(
-        label="Saldo awal",
-        widget=forms.TextInput(attrs={"class": "input", "inputmode": "decimal", "autofocus": True}),
-    )
     opening_balance_date = forms.CharField(
         label="Tanggal saldo awal",
         widget=forms.DateInput(attrs={"class": "input", "type": "date"}),
@@ -137,18 +134,31 @@ class BalanceSetupForm(forms.Form):
     def __init__(self, *args, business_start_date: date | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.business_start_date = business_start_date
-
-    def clean_opening_balance(self) -> Decimal:
-        try:
-            return parse_id_number(
-                self.cleaned_data["opening_balance"],
-                places=2,
-                field="Saldo awal",
-                min_value=Decimal("0"),
-                max_value=MONEY_MAX,
+        for code, label in ACCOUNT_CHOICES:
+            self.fields[f"opening_balance_{code}"] = forms.CharField(
+                label=f"Saldo awal {label} (Rp)",
+                widget=forms.TextInput(
+                    attrs={"class": "input", "inputmode": "decimal", "autocomplete": "off"}
+                ),
             )
-        except DomainError as exc:
-            raise ValidationError(exc.message) from exc
+
+    def clean(self):
+        cleaned = super().clean()
+        for code, label in ACCOUNT_CHOICES:
+            field = f"opening_balance_{code}"
+            if field not in cleaned:
+                continue
+            try:
+                cleaned[field] = parse_id_number(
+                    cleaned[field],
+                    places=2,
+                    field=f"Saldo awal {label}",
+                    min_value=Decimal("0"),
+                    max_value=MONEY_MAX,
+                )
+            except DomainError as exc:
+                self.add_error(field, exc.message)
+        return cleaned
 
     def clean_opening_balance_date(self) -> date:
         value = _parse_date(self.cleaned_data["opening_balance_date"])

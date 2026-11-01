@@ -9,20 +9,14 @@ import pytest
 from django.urls import reverse
 
 from core.utils.dates import today_wib
-from ledger.models import Account, Transaction
+from ledger.models import Account, AccountTransfer, Transaction
+from reports.queries import daily_recap
 from tests.factories import make_category, make_item, make_stock_item, make_transaction
 
 
 @pytest.mark.django_db
 def test_ac_16_harian_200(completed_setup, client):
     client.force_login(completed_setup)
-    Account.objects.create(
-        name="Kas",
-        type="cash",
-        currency="IDR",
-        opening_balance=Decimal("250000000.00"),
-        opening_balance_date=date(2026, 9, 1),
-    )
     cat_layer = make_category(code="LAYER", name="Ayam Petelur")
     item_telur = make_item(
         name="Pendapatan Telur",
@@ -35,7 +29,7 @@ def test_ac_16_harian_200(completed_setup, client):
         flow="income",
         category=cat_layer,
         item=item_telur,
-        account=Account.objects.first(),
+        account=Account.objects.get(code="cash"),
         amount=Decimal("500000.00"),
         qty=Decimal("10"),
         unit="kg",
@@ -127,6 +121,13 @@ def test_dashboard_menampilkan_ringkasan_dan_data_infografis(completed_setup, cl
     assert response.context["dashboard_income_display"] == "1.000.000,00"
     assert response.context["dashboard_expense_display"] == "250.000,00"
     assert response.context["dashboard_net_display"] == "750.000,00"
+    assert [row["code"] for row in response.context["account_balances"]] == [
+        "bca",
+        "mandiri",
+        "ibk",
+        "cash",
+    ]
+    assert response.context["total_balance_display"] == "250.750.000,00"
     assert response.context["cashflow_chart"]["income"][today.day - 1] == 1000000
     assert response.context["cashflow_chart"]["expense"][today.day - 1] == 250000
     assert response.context["category_chart"] == {
@@ -146,13 +147,6 @@ def test_dashboard_menampilkan_ringkasan_dan_data_infografis(completed_setup, cl
 @pytest.mark.django_db
 def test_recap_tampilkan_empat_baris(completed_setup, client):
     client.force_login(completed_setup)
-    Account.objects.create(
-        name="Kas",
-        type="cash",
-        currency="IDR",
-        opening_balance=Decimal("250000000.00"),
-        opening_balance_date=date(2026, 9, 1),
-    )
     cat_layer = make_category(code="LAYER", name="Ayam Petelur")
     item_telur = make_item(
         name="Pendapatan Telur",
@@ -165,7 +159,7 @@ def test_recap_tampilkan_empat_baris(completed_setup, client):
         flow="income",
         category=cat_layer,
         item=item_telur,
-        account=Account.objects.first(),
+        account=Account.objects.get(code="cash"),
         amount=Decimal("500000.00"),
         qty=Decimal("10"),
         unit="kg",
@@ -176,3 +170,35 @@ def test_recap_tampilkan_empat_baris(completed_setup, client):
     assert "Pengeluaran" in resp.content.decode()
     assert "Mutasi" in resp.content.decode()
     assert "Selisih" in resp.content.decode()
+
+
+@pytest.mark.django_db
+def test_rekap_saldo_per_akun_dan_transfer_internal(completed_setup):
+    cash = Account.objects.get(code="cash")
+    bca = Account.objects.get(code="bca")
+    category = make_category(code="LAYER", name="Ayam Petelur")
+    item = make_item(name="Pendapatan Telur", flow="income", default_category=category)
+    Transaction.objects.create(
+        date=date(2026, 10, 5),
+        flow="income",
+        category=category,
+        item=item,
+        account=bca,
+        amount=Decimal("500000.00"),
+        period_month=date(2026, 10, 1),
+    )
+    AccountTransfer.objects.create(
+        date=date(2026, 10, 5),
+        from_account=cash,
+        to_account=bca,
+        amount=Decimal("100000.00"),
+    )
+
+    result = daily_recap(date(2026, 10, 5), date(2026, 10, 5))
+
+    balances = {row["code"]: row for row in result.accounts}
+    assert balances["cash"]["closing"] == Decimal("249900000.00")
+    assert balances["bca"]["closing"] == Decimal("600000.00")
+    assert result.account_total["closing"] == Decimal("250500000.00")
+    assert [row["entry_type"] for row in result.detail] == ["transaction", "transfer"]
+    assert result.detail[-1]["saldo_kas"] == Decimal("250500000.00")

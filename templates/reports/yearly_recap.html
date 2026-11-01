@@ -62,6 +62,8 @@
     </table>
   </section>
 
+  {% include "reports/_account_balances.html" %}
+
   {% if result.months %}
     <section class="card mb-6 overflow-hidden">
       <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">Rekap per Bulan</h2>
@@ -102,10 +104,12 @@
             <th class="px-4 py-3 text-left font-medium text-slate-500">Kategori</th>
             <th class="px-4 py-3 text-left font-medium text-slate-500">Item</th>
             <th class="px-4 py-3 text-left font-medium text-slate-500">Arus</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-500">Metode / Bank</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Sumber uang</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-500">Metode</th>
             <th class="px-4 py-3 text-right font-medium text-slate-500">Nominal</th>
             <th class="px-4 py-3 text-right font-medium text-slate-500">Qty</th>
-            <th class="px-4 py-3 text-right font-medium text-slate-500">Saldo Kas</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Saldo sumber</th>
+            <th class="px-4 py-3 text-right font-medium text-slate-500">Saldo total</th>
             <th class="px-4 py-3 text-right font-medium text-slate-500">Stok Berjalan</th>
           </tr>
         </thead>
@@ -117,19 +121,21 @@
               <td class="px-4 py-3">{{ row.item }}</td>
               <td class="px-4 py-3">
                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                  {% if row.flow == 'income' %}bg-emerald-50 text-emerald-800{% else %}bg-rose-50 text-rose-800{% endif %}">
-                  {{ FLOW_LABELS|get_item:row.flow }}
+                  {% if row.flow == 'income' %}bg-emerald-50 text-emerald-800{% elif row.flow == 'expense' %}bg-rose-50 text-rose-800{% else %}bg-sky-50 text-sky-800{% endif %}">
+                  {% if row.flow == "transfer" %}Pindah dana{% else %}{{ FLOW_LABELS|get_item:row.flow }}{% endif %}
                 </span>
               </td>
-              <td class="px-4 py-3">{% if row.payment_method == 'transfer' %}Transfer · {{ BANK_LABELS|get_item:row.transfer_bank|default:"—" }}{% elif row.payment_method == 'cash' %}Tunai{% else %}—{% endif %}</td>
+              <td class="px-4 py-3">{{ row.account_name }}</td>
+              <td class="px-4 py-3">{% if row.entry_type == "transfer" %}{{ row.account_name }} → {{ row.transfer_to }}{% elif row.needs_account_review %}Perlu ditinjau{% elif row.payment_method == 'transfer' %}Transfer · {{ BANK_LABELS|get_item:row.transfer_bank|default:"—" }}{% elif row.payment_method == 'cash' %}Tunai{% else %}—{% endif %}</td>
               <td class="px-4 py-3 text-right tabular-nums">{{ row.amount|floatformat:2 }}</td>
               <td class="px-4 py-3 text-right tabular-nums">{% if row.qty %}{{ row.qty|floatformat:3 }}{% else %}-{% endif %}</td>
+              <td class="px-4 py-3 text-right tabular-nums">{{ row.saldo_sumber|floatformat:2 }}</td>
               <td class="px-4 py-3 text-right tabular-nums">{{ row.saldo_kas|floatformat:2 }}</td>
               <td class="px-4 py-3 text-right tabular-nums">{% if row.stock_item_id %}{{ row.stok_berjalan|floatformat:3 }}{% else %}-{% endif %}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="9" class="px-4 py-8 text-center text-slate-500">Tidak ada transaksi</td>
+              <td colspan="11" class="px-4 py-8 text-center text-slate-500">Tidak ada transaksi</td>
             </tr>
           {% endfor %}
         </tbody>

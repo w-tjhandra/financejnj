@@ -1,0 +1,46 @@
+{% load core_tags %}
+
+<section class="card mb-6 overflow-hidden">
+  <h2 class="px-4 py-3 border-b border-slate-200 text-sm font-semibold text-slate-900">
+    Saldo per sumber uang
+  </h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="px-4 py-3 text-left">Sumber</th>
+          <th class="px-4 py-3 text-right">Saldo awal periode</th>
+          <th class="px-4 py-3 text-right">Transaksi masuk</th>
+          <th class="px-4 py-3 text-right">Transaksi keluar</th>
+          <th class="px-4 py-3 text-right">Pindah masuk</th>
+          <th class="px-4 py-3 text-right">Pindah keluar</th>
+          <th class="px-4 py-3 text-right">Saldo akhir</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {% for account in result.accounts %}
+          <tr>
+            <td class="px-4 py-3 font-medium">{{ account.name }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">Rp {{ account.opening|money_id }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">Rp {{ account.transaction_in|money_id }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">Rp {{ account.transaction_out|money_id }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">Rp {{ account.transfer_in|money_id }}</td>
+            <td class="px-4 py-3 text-right tabular-nums">Rp {{ account.transfer_out|money_id }}</td>
+            <td class="px-4 py-3 text-right font-semibold tabular-nums">Rp {{ account.closing|money_id }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="border-t border-slate-200 bg-slate-50 font-semibold">
+        <tr>
+          <td class="px-4 py-3">Total gabungan</td>
+          <td class="px-4 py-3 text-right tabular-nums">Rp {{ result.account_total.opening|money_id }}</td>
+          <td class="px-4 py-3 text-right tabular-nums">Rp {{ result.account_total.transaction_in|money_id }}</td>
+          <td class="px-4 py-3 text-right tabular-nums">Rp {{ result.account_total.transaction_out|money_id }}</td>
+          <td class="px-4 py-3 text-right tabular-nums">Rp {{ result.account_total.transfer_in|money_id }}</td>
+          <td class="px-4 py-3 text-right tabular-nums">Rp {{ result.account_total.transfer_out|money_id }}</td>
+          <td class="px-4 py-3 text-right tabular-nums">Rp {{ result.account_total.closing|money_id }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>

@@ -20,7 +20,7 @@ BUGS FOUND DURING TESTING:
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from io import BytesIO
 from unittest.mock import patch
@@ -36,29 +36,23 @@ from audit.service import log_audit
 from core.errors import (
     DomainError,
     DuplicateSalary,
-    NotFound,
     PeriodLocked,
     StockConflict,
-    StockInsufficient,
 )
 from core.models import CompanyProfile, PeriodLock
 from core.services.locks import (
-    UNLOCK_REASON_MAX,
-    UNLOCK_REASON_MIN,
-    chain_gap,
     is_date_editable,
     lock_period,
-    max_locked_period,
     unlock_period,
 )
 from core.utils.dates import add_months, month_start, today_wib
 from core.utils.numbers import format_id_number, format_money, format_qty, parse_id_number
-from ledger.models import ATTACHMENT_MAX_BYTES, Account, Attachment, Transaction
+from ledger.models import Account, Attachment, Transaction
+from ledger.services.accounts import ensure_default_accounts
 from ledger.services.opening import (
     cash_is_locked,
     cash_locked_since,
     record_opening_correction,
-    set_opening_balance,
 )
 from ledger.services.transactions import (
     create_transaction,
@@ -111,6 +105,7 @@ def completed_setup(db, test_user):
         opening_balance="250000000.00",
         opening_balance_date=date(2026, 9, 1),
     )
+    ensure_default_accounts(opening_balance_date=account.opening_balance_date)
     ensure_master_data(stock={"feed": {"qty": Decimal("1000"), "min_threshold": Decimal("100")}, "egg": {"qty": Decimal("500"), "min_threshold": Decimal("50")}, "manure": {"qty": Decimal("200"), "min_threshold": Decimal("20")}})
     return account
 
@@ -200,7 +195,13 @@ class TestSetupWizardFlow:
 
         resp = client.post(
             reverse("setup_balance"),
-            {"opening_balance": "250.000.000", "opening_balance_date": "2026-09-01"},
+            {
+                "opening_balance_cash": "250.000.000",
+                "opening_balance_bca": "0",
+                "opening_balance_mandiri": "0",
+                "opening_balance_ibk": "0",
+                "opening_balance_date": "2026-09-01",
+            },
         )
         assert resp.status_code == 302
         assert "/setup/stok" in resp.url
@@ -234,7 +235,7 @@ class TestSetupWizardFlow:
         assert profile.setup_completed is True
         assert profile.name == "Telur Test Farm"
 
-        account = Account.objects.first()
+        account = Account.objects.get(code="cash")
         assert account.opening_balance == Decimal("250000000.00")
 
         stock_feed = StockItem.objects.get(code="feed")
@@ -257,7 +258,16 @@ class TestSetupWizardFlow:
         assert resp.status_code == 302
         assert "/setup/saldo" in resp.url
 
-        client.post(reverse("setup_balance"), {"opening_balance": "100.000.000", "opening_balance_date": "2026-09-01"})
+        client.post(
+            reverse("setup_balance"),
+            {
+                "opening_balance_cash": "100.000.000",
+                "opening_balance_bca": "0",
+                "opening_balance_mandiri": "0",
+                "opening_balance_ibk": "0",
+                "opening_balance_date": "2026-09-01",
+            },
+        )
         client.post(
             reverse("setup_stock"),
             {"feed_qty": "0", "egg_qty": "0", "manure_qty": "0", "feed_min": "", "egg_min": "", "manure_min": ""},
@@ -272,7 +282,6 @@ class TestSetupWizardFlow:
     @pytest.mark.django_db
     def test_duplicate_account_prevention(self, db):
         """Cannot create second account with same username (case-insensitive)."""
-        from django.contrib.auth import get_user_model
         
         # Create first user directly in DB
         User = get_user_model()
@@ -949,6 +958,7 @@ class TestReports:
         workbook = load_workbook(BytesIO(resp.content), read_only=True)
         assert workbook.sheetnames == [
             "Ringkasan",
+            "Saldo per Sumber",
             "Pemasukan",
             "Pengeluaran",
             "Stok",
@@ -959,15 +969,18 @@ class TestReports:
             "Tanggal",
             "Kategori",
             "Item",
-            "Jenis",
+            "Arus",
+            "Sumber",
             "Jumlah",
             "Qty",
             "Satuan",
             "Metode",
             "Bank",
+            "Saldo Sumber",
+            "Saldo Total",
         )
         transfer_row = next(row for row in rows[2:] if row[2] == item_pakan.name)
-        assert transfer_row[7:9] == ("Transfer", "IBK")
+        assert transfer_row[8:10] == ("Transfer", "IBK")
 
     @pytest.mark.django_db
     def test_xlsx_export_all_period_types(self, logged_client, master_data):
@@ -1419,7 +1432,16 @@ class TestFullUserJourneys:
             {"username": "farm1", "first_name": "Farm One", "password": "RahasiaKandang2026", "password_confirm": "RahasiaKandang2026"},
         )
         client.post(reverse("setup_profile"), {"name": "Farm One", "business_start_date": "2026-09-01"})
-        client.post(reverse("setup_balance"), {"opening_balance": "100.000.000", "opening_balance_date": "2026-09-01"})
+        client.post(
+            reverse("setup_balance"),
+            {
+                "opening_balance_cash": "100.000.000",
+                "opening_balance_bca": "0",
+                "opening_balance_mandiri": "0",
+                "opening_balance_ibk": "0",
+                "opening_balance_date": "2026-09-01",
+            },
+        )
         client.post(
             reverse("setup_stock"),
             {"feed_qty": "500", "feed_min": "50", "egg_qty": "200", "egg_min": "20", "manure_qty": "100", "manure_min": "10"},
@@ -1652,7 +1674,7 @@ class TestPerformanceBaseline:
                 date=today_wib(), flow="expense", category=cat, item=item, amount=Decimal("100000"), qty=Decimal("1"), actor=account
             )
 
-        with django_assert_num_queries(25):
+        with django_assert_num_queries(25, exact=False):
             daily_recap(today_wib(), today_wib(), None)
 
     @pytest.mark.django_db

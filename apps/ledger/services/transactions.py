@@ -54,6 +54,7 @@ AUDIT_FIELDS = (
     "unit",
     "payment_method",
     "transfer_bank",
+    "needs_account_review",
     "notes",
     "period_month",
     "is_opening_correction",
@@ -87,8 +88,9 @@ def _coerce_decimal(value: object, *, field: str) -> Decimal:
         raise DomainError(message, code="number_invalid", fields={field: message}) from exc
 
 
-def _resolve_account() -> Account:
-    account = Account.current() or Account.objects.order_by("pk").first()
+def _resolve_account(payment_method: str | None, transfer_bank: str | None) -> Account:
+    code = transfer_bank if payment_method == "transfer" else "cash"
+    account = Account.by_code(code) or Account.current() or Account.objects.order_by("pk").first()
     if account is None:
         raise DomainError("Akun kas belum dibuat.", code="account_missing")
     return account
@@ -350,7 +352,9 @@ def create_transaction(
 
     value_date = _coerce_date(date, field="date")
     money = _coerce_decimal(amount, field="Nominal").quantize(MONEY_QUANTUM, rounding=ROUND_HALF_UP)
-    account = _resolve_account()
+    payment = _normalize_payment(payment_method)
+    bank = _normalize_transfer_bank(payment, transfer_bank)
+    account = _resolve_account(payment, bank)
     _validate_header(
         value_date=value_date,
         flow=flow,
@@ -369,8 +373,6 @@ def create_transaction(
         opening_balance_date=account.opening_balance_date,
     )
 
-    payment = _normalize_payment(payment_method)
-    bank = _normalize_transfer_bank(payment, transfer_bank)
     notes = _normalize_notes(notes)
 
     direction = None
@@ -502,8 +504,11 @@ def update_transaction(
             message = "Transaksi koreksi saldo awal tidak bisa diedit."
             raise DomainError(message, code="opening_correction_locked", fields={"date": message})
 
-        account = txn.account
+        old_account = txn.account
         old_date = txn.date
+        payment = _normalize_payment(payment_method)
+        bank = _normalize_transfer_bank(payment, transfer_bank)
+        account = _resolve_account(payment, bank)
 
         _validate_header(
             value_date=value_date,
@@ -516,7 +521,8 @@ def update_transaction(
             existing_category_id=txn.category_id,
         )
         # E-07: kedua tanggal harus bisa diedit, bukan hanya tanggal baru.
-        _validate_date_bounds(old_date, account)
+        _validate_date_bounds(old_date, old_account)
+        _validate_date_bounds(value_date, account)
         assert_date_editable(old_date, operation="update")
         assert_date_editable(value_date, operation="update")
 
@@ -528,8 +534,6 @@ def update_transaction(
             period_month=period_month,
             opening_balance_date=account.opening_balance_date,
         )
-        payment = _normalize_payment(payment_method)
-        bank = _normalize_transfer_bank(payment, transfer_bank)
         notes = _normalize_notes(notes)
 
         new_stock_item = item.stock_item if item.stock_item_id is not None else None
@@ -597,6 +601,7 @@ def update_transaction(
         txn.unit = unit_value
         txn.payment_method = payment
         txn.transfer_bank = bank
+        txn.needs_account_review = False
         txn.notes = notes
         txn.period_month = period
         txn.updated_by = actor if getattr(actor, "pk", None) else None
@@ -616,6 +621,7 @@ def update_transaction(
                         "unit",
                         "payment_method",
                         "transfer_bank",
+                        "needs_account_review",
                         "notes",
                         "period_month",
                         "updated_by",

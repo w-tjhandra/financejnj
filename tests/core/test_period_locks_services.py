@@ -29,7 +29,7 @@ REASON = "Salah input nominal pakan 15 Sep"
 
 
 def test_lock_bulan_pertama_dan_audit_jumlah(completed_setup):
-    account = Account.objects.get()
+    account = Account.objects.get(code="cash")
     make_transaction(
         item=make_item(name="Obat Uji", flow="expense"),
         account=account,

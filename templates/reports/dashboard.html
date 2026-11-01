@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static core_tags %}
 
 {% block title %}Dashboard · {{ company_name|default:"PT Join Nuriwell Java" }}{% endblock %}
 
@@ -35,6 +35,28 @@
         <strong class="dashboard-stat-value{% if dashboard_net < 0 %} is-expense{% else %} is-income{% endif %}">
           Rp {{ dashboard_net_display }}
         </strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="dashboard-section" aria-labelledby="account-balance-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Saldo kas</p>
+        <h2 id="account-balance-title">Saldo per sumber uang</h2>
+      </div>
+      <a href="{% url 'opening_balance' %}" class="dashboard-section-link">Atur saldo awal →</a>
+    </div>
+    <div class="dashboard-summary">
+      {% for account in account_balances %}
+        <article class="dashboard-stat">
+          <span class="dashboard-stat-label">{{ account.name }}</span>
+          <strong class="dashboard-stat-value">Rp {{ account.balance|money_id }}</strong>
+        </article>
+      {% endfor %}
+      <article class="dashboard-stat">
+        <span class="dashboard-stat-label">Total gabungan</span>
+        <strong class="dashboard-stat-value">Rp {{ total_balance_display }}</strong>
       </article>
     </div>
   </section>

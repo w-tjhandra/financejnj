@@ -55,7 +55,13 @@ def post_profile(client, *, name="Telur Jaya Farm", start=START_ISO, app_start=N
 def post_balance(client, *, amount="250.000.000", value_date=START_ISO):
     return client.post(
         reverse("setup_balance"),
-        {"opening_balance": amount, "opening_balance_date": value_date},
+        {
+            "opening_balance_cash": amount,
+            "opening_balance_bca": "0",
+            "opening_balance_mandiri": "0",
+            "opening_balance_ibk": "0",
+            "opening_balance_date": value_date,
+        },
     )
 
 
@@ -312,10 +318,14 @@ def test_saldo_awal_tersimpan(client):
 
     assert response.status_code == 302
     assert response.url == "/setup/stok"
-    account = Account.objects.get()
+    account = Account.objects.get(code="cash")
     assert account.opening_balance == Decimal("250000000.00")
     assert account.opening_balance_date == START
     assert account.currency == "IDR"
+    assert Account.objects.count() == 4
+    assert Account.objects.get(code="bca").opening_balance == Decimal("0")
+    assert Account.objects.get(code="mandiri").opening_balance == Decimal("0")
+    assert Account.objects.get(code="ibk").opening_balance == Decimal("0")
 
 
 # --- Langkah 4: draft session ---------------------------------------------
@@ -343,7 +353,7 @@ def test_stok_awal_disimpan_di_session_bukan_db(client):
 def test_tidak_ada_data_bisnis_sebelum_finalisasi(client):
     walk_to_review(client)
 
-    assert Account.objects.count() == 1
+    assert Account.objects.count() == 4
     assert CompanyProfile.objects.count() == 1
     assert Category.objects.count() == 0
     assert Item.objects.count() == 0
@@ -381,8 +391,8 @@ def test_finalisasi_membuat_semua_data_master(client):
 
     profile = CompanyProfile.get_solo()
     assert profile.setup_completed is True
-    assert Account.objects.count() == 1
-    assert Account.objects.get().opening_balance == Decimal("250000000.00")
+    assert Account.objects.count() == 4
+    assert Account.objects.get(code="cash").opening_balance == Decimal("250000000.00")
     assert_master_seeded()
 
     audit = AuditLog.objects.get(entity="company_profile", action="update")

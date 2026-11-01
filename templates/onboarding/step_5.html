@@ -18,9 +18,14 @@
   </div>
 
   <div class="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3">
-    <dt class="text-sm font-medium text-slate-500">Saldo awal</dt>
+    <dt class="text-sm font-medium text-slate-500">Saldo awal per sumber</dt>
     <dd class="text-sm text-slate-900 sm:col-span-2">
-      Rp {{ balance_display }}
+      <ul class="space-y-1">
+        {% for account in accounts %}
+          <li>{{ account.name }}: <span class="font-medium tabular-nums">Rp {{ account.balance }}</span></li>
+        {% endfor %}
+      </ul>
+      <span class="mt-1 block font-semibold">Total gabungan: Rp {{ balance_total_display }}</span>
       <span class="block text-xs text-slate-500">Per {{ balance_date_display }}</span>
     </dd>
   </div>

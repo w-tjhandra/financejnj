@@ -21,7 +21,7 @@ from core import messages
 from core.errors import DomainError
 from core.utils.dates import add_months, format_date_id, format_month_id, month_start
 from core.utils.periods import format_period_label, week
-from ledger.models import Account, Transaction
+from ledger.models import ACCOUNT_CHOICES, Account, AccountTransfer, Transaction
 from master.models import Category
 
 ZERO = Decimal("0")
@@ -58,6 +58,8 @@ class RecapResult:
     detail: list[dict]
     # per jenis stok: opening/in/out/adj/closing
     stock: list[StockRecapRow]
+    accounts: list[dict]
+    account_total: dict
     months: list[dict] | None = None  # hanya yearly_recap
     gaji: list[dict] | None = None  # hanya monthly_recap
 
@@ -85,10 +87,9 @@ def _category_pks(category_ids) -> list[int] | None:
 
 
 def _base_transactions(date_from: date, date_to: date, category_ids):
-    from ledger.models import Account
-
-    acc = Account.current()
-    opening_date = acc.opening_balance_date if acc else None
+    opening_date = Account.objects.order_by("opening_balance_date").values_list(
+        "opening_balance_date", flat=True
+    ).first()
     qs = Transaction.objects.select_related("category", "item", "item__stock_item")
     if date_from is not None:
         qs = qs.filter(date__gte=date_from)
@@ -131,16 +132,109 @@ def _summary_rows(qs) -> list[SummaryRow]:
     ]
 
 
-def _account_opening() -> tuple[date | None, Decimal]:
-    account = Account.current() or Account.objects.order_by("pk").first()
-    if account is None:
-        return None, ZERO
-    return account.opening_balance_date, account.opening_balance
+def _account_summaries(date_from: date, date_to: date) -> list[dict]:
+    account_order = {code: index for index, (code, _name) in enumerate(ACCOUNT_CHOICES)}
+    accounts = sorted(
+        Account.objects.filter(is_active=True),
+        key=lambda row: account_order.get(row.code, len(account_order)),
+    )
+    account_ids = [account.pk for account in accounts]
+    if not account_ids:
+        return []
+
+    transaction_totals = {
+        row["account_id"]: row
+        for row in (
+            Transaction.objects.filter(
+                account_id__in=account_ids,
+                date__gte=F("account__opening_balance_date"),
+                date__lte=date_to,
+            )
+            .values("account_id")
+            .annotate(
+                before=Sum(
+                    Case(When(flow="income", then=F("amount")), default=-F("amount")),
+                    filter=Q(date__lt=date_from),
+                ),
+                transaction_in=Sum(
+                    "amount",
+                    filter=Q(date__gte=date_from, flow="income"),
+                ),
+                transaction_out=Sum(
+                    "amount",
+                    filter=Q(date__gte=date_from, flow="expense"),
+                ),
+            )
+        )
+    }
+
+    transfer_in_totals = {
+        row["to_account_id"]: row
+        for row in (
+            AccountTransfer.objects.filter(
+                to_account_id__in=account_ids,
+                date__gte=F("to_account__opening_balance_date"),
+                date__lte=date_to,
+            )
+            .values("to_account_id")
+            .annotate(
+                before=Sum("amount", filter=Q(date__lt=date_from)),
+                period=Sum("amount", filter=Q(date__gte=date_from)),
+            )
+        )
+    }
+    transfer_out_totals = {
+        row["from_account_id"]: row
+        for row in (
+            AccountTransfer.objects.filter(
+                from_account_id__in=account_ids,
+                date__gte=F("from_account__opening_balance_date"),
+                date__lte=date_to,
+            )
+            .values("from_account_id")
+            .annotate(
+                before=Sum("amount", filter=Q(date__lt=date_from)),
+                period=Sum("amount", filter=Q(date__gte=date_from)),
+            )
+        )
+    }
+
+    summaries = []
+    for account in accounts:
+        code = account.code or "cash"
+        transaction_totals_for_account = transaction_totals.get(account.pk, {})
+        transfer_in_for_account = transfer_in_totals.get(account.pk, {})
+        transfer_out_for_account = transfer_out_totals.get(account.pk, {})
+        opening = ZERO
+        if date_from >= account.opening_balance_date:
+            opening = (
+                account.opening_balance
+                + (transaction_totals_for_account.get("before") or ZERO)
+                + (transfer_in_for_account.get("before") or ZERO)
+                - (transfer_out_for_account.get("before") or ZERO)
+            )
+        transaction_in = transaction_totals_for_account.get("transaction_in") or ZERO
+        transaction_out = transaction_totals_for_account.get("transaction_out") or ZERO
+        transfer_in = transfer_in_for_account.get("period") or ZERO
+        transfer_out = transfer_out_for_account.get("period") or ZERO
+        closing = opening + transaction_in - transaction_out + transfer_in - transfer_out
+        summaries.append(
+            {
+                "code": code,
+                "name": account.name,
+                "opening": opening,
+                "transaction_in": transaction_in,
+                "transaction_out": transaction_out,
+                "transfer_in": transfer_in,
+                "transfer_out": transfer_out,
+                "closing": closing,
+            }
+        )
+    return summaries
 
 
 def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
-    """Baris detail per transaksi dengan saldo kas dan stok berjalan (window)."""
-    opening_date, opening_amount = _account_opening()
+    """Fetch transaction details and stock balances for the report interval."""
     pks = _category_pks(category_ids)
     params: list = [date_from, date_to]
     if pks is None:
@@ -150,29 +244,21 @@ def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
         cat_where = f"t.category_id IN ({placeholders})"
         params.extend(pks)
     params.extend([date_from, date_to])
-    if opening_date is not None:
-        opening_clause = "CASE WHEN k.date >= %s THEN %s ELSE 0 END"
-        params.extend([opening_date, opening_amount])
-    else:
-        opening_clause = "0"
     sql = f"""
         WITH txns AS (
             SELECT t.id AS txn_id, t.date, t.flow, t.amount, t.qty, t.unit,
                    t.payment_method, t.transfer_bank,
+                   t.needs_account_review, t.account_id,
                    c.code AS kategori_code, c.name AS kategori_name,
-                   i.name AS item_name, i.stock_item_id
+                   i.name AS item_name, i.stock_item_id,
+                   a.code AS account_code, a.name AS account_name
             FROM ledger_transaction t
             JOIN master_category c ON c.id = t.category_id
             JOIN master_item i ON i.id = t.item_id
+            JOIN ledger_account a ON a.id = t.account_id
             WHERE t.deleted_at IS NULL
               AND t.date >= %s AND t.date <= %s
               AND {cat_where}
-        ),
-        kas AS (
-            SELECT *,
-                   SUM(CASE flow WHEN 'income' THEN amount ELSE -amount END)
-                   OVER (ORDER BY date, txn_id ROWS UNBOUNDED PRECEDING) AS flow_delta
-            FROM txns
         ),
         mov_daily AS (
             SELECT stock_item_id, date,
@@ -191,6 +277,7 @@ def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
             FROM mov_daily
         )
         SELECT k.date AS tanggal,
+               k.txn_id AS id,
                k.kategori_name AS kategori,
                k.item_name AS item,
                k.stock_item_id AS stock_item_id,
@@ -200,9 +287,14 @@ def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
                k.unit AS unit,
                k.payment_method AS payment_method,
                k.transfer_bank AS transfer_bank,
-               (k.flow_delta + {opening_clause}) AS saldo_kas,
+               k.needs_account_review AS needs_account_review,
+               k.account_id AS account_id,
+               k.account_code AS account_code,
+               k.account_name AS account_name,
+               0::numeric AS saldo_kas,
+               0::numeric AS saldo_sumber,
                COALESCE(si.opening_qty, 0) + COALESCE(mv.run_delta, 0) AS stok_berjalan
-        FROM kas k
+        FROM txns k
         LEFT JOIN master_stockitem si ON si.id = k.stock_item_id
         LEFT JOIN LATERAL (
             SELECT run_delta
@@ -217,6 +309,100 @@ def _detail_rows(date_from: date, date_to: date, category_ids) -> list[dict]:
         cursor.execute(sql, params)
         columns = [column[0] for column in cursor.description]
         return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
+
+
+def _cash_ledger(
+    date_from: date,
+    date_to: date,
+    details: list[dict],
+    accounts: list[dict],
+) -> list[dict]:
+    """Merge internal transfers into the cash detail without changing operating totals."""
+    balances = {row["code"]: row["opening"] for row in accounts}
+    account_names = {row["code"]: row["name"] for row in accounts}
+    visible_details = {row["id"]: row for row in details}
+    events = []
+    for txn in Transaction.objects.filter(date__gte=date_from, date__lte=date_to).select_related(
+        "account"
+    ):
+        code = txn.account.code or "cash"
+        events.append(
+            (
+                txn.date,
+                0,
+                txn.pk,
+                "transaction",
+                {
+                    "id": txn.pk,
+                    "account_id": txn.account_id,
+                    "account_code": code,
+                    "account_name": txn.account.name,
+                    "flow": txn.flow,
+                    "amount": txn.amount,
+                    "detail": visible_details.get(txn.pk),
+                },
+            )
+        )
+    for transfer in AccountTransfer.objects.filter(
+        date__gte=date_from,
+        date__lte=date_to,
+    ).select_related("from_account", "to_account"):
+        source_code = transfer.from_account.code or "cash"
+        destination_code = transfer.to_account.code or "cash"
+        if source_code not in balances or destination_code not in balances:
+            continue
+        events.append(
+            (
+                transfer.date,
+                1,
+                transfer.pk,
+                "transfer",
+                {
+                    "tanggal": transfer.date,
+                    "id": transfer.pk,
+                    "entry_type": "transfer",
+                    "kategori": "Pindah dana",
+                    "item": f"{transfer.from_account.name} → {transfer.to_account.name}",
+                    "stock_item_id": None,
+                    "flow": "transfer",
+                    "amount": transfer.amount,
+                    "qty": None,
+                    "unit": None,
+                    "payment_method": None,
+                    "transfer_bank": None,
+                    "needs_account_review": False,
+                    "account_id": transfer.from_account_id,
+                    "account_code": source_code,
+                    "account_name": transfer.from_account.name,
+                    "transfer_to": transfer.to_account.name,
+                    "transfer_from_code": source_code,
+                    "transfer_to_code": destination_code,
+                    "stok_berjalan": None,
+                },
+            )
+        )
+
+    merged = []
+    for _when, _kind_order, _pk, event_type, row in sorted(events):
+        if event_type == "transfer":
+            source_code = row["transfer_from_code"]
+            destination_code = row["transfer_to_code"]
+            balances[source_code] -= row["amount"]
+            balances[destination_code] += row["amount"]
+        else:
+            code = row["account_code"] or "cash"
+            delta = row["amount"] if row["flow"] == "income" else -row["amount"]
+            balances[code] = balances.get(code, ZERO) + delta
+            row = row["detail"]
+            if row is None:
+                continue
+            row["account_code"] = code
+            row["account_name"] = row["account_name"] or account_names.get(code, "Tunai")
+            row["entry_type"] = "transaction"
+        row["saldo_sumber"] = balances.get(row["account_code"], ZERO)
+        row["saldo_kas"] = sum(balances.values(), ZERO)
+        merged.append(row)
+    return merged
 
 
 def _stock_rows(date_from: date, date_to: date) -> list[StockRecapRow]:
@@ -290,13 +476,28 @@ def _recap_range(date_from: date, date_to: date, period_label: str, category_ids
             messages.DATE_RANGE, code="date_range", fields={"date": messages.DATE_RANGE}
         )
     base = _base_transactions(date_from, date_to, category_ids)
+    accounts = _account_summaries(date_from, date_to)
+    detail = _detail_rows(date_from, date_to, category_ids)
+    account_total = {
+        key: sum((row[key] for row in accounts), ZERO)
+        for key in (
+            "opening",
+            "transaction_in",
+            "transaction_out",
+            "transfer_in",
+            "transfer_out",
+            "closing",
+        )
+    }
     return RecapResult(
         date_from=date_from,
         date_to=date_to,
         period_label=period_label,
         summary=_summary_rows(base),
-        detail=_detail_rows(date_from, date_to, category_ids),
+        detail=_cash_ledger(date_from, date_to, detail, accounts),
         stock=_stock_rows(date_from, date_to),
+        accounts=accounts,
+        account_total=account_total,
     )
 
 

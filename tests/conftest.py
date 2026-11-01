@@ -8,6 +8,7 @@ import pytest
 
 from core.models import CompanyProfile
 from ledger.models import Account
+from ledger.services.accounts import ensure_default_accounts
 
 TEST_PASSWORD = "RahasiaKandang2026"
 
@@ -21,11 +22,14 @@ def completed_setup(db, django_user_model):
         application_start_date=date(2026, 9, 1),
         setup_completed=True,
     )
-    Account.objects.create(
+    account = Account.objects.create(
         name="Kas Utama",
         type="cash",
         currency="IDR",
         opening_balance="250000000.00",
         opening_balance_date=date(2026, 9, 1),
     )
+    ensure_default_accounts(opening_balance_date=account.opening_balance_date)
+    account.opening_balance = "250000000.00"
+    account.save(update_fields=["opening_balance"])
     return user

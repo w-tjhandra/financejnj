@@ -4,14 +4,20 @@
 <form method="post" action="{% url 'setup_balance' %}" novalidate>
   {% csrf_token %}
 
-  <div class="mb-4">
-    <label for="{{ form.opening_balance.id_for_label }}" class="label">{{ form.opening_balance.label }}</label>
-    {{ form.opening_balance }}
-    {% if form.opening_balance.errors %}
-      <p role="alert" class="mt-1 text-sm text-red-700">{{ form.opening_balance.errors|join:" " }}</p>
-    {% else %}
-      <p class="mt-1 text-xs text-slate-500">Saldo kas saat usaha mulai, contoh: 250.000.000</p>
-    {% endif %}
+  <div class="mb-4 grid gap-4 sm:grid-cols-2">
+    {% for field in form %}
+      {% if field.name != "opening_balance_date" %}
+        <div>
+          <label for="{{ field.id_for_label }}" class="label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ field.errors|join:" " }}</p>
+          {% else %}
+            <p class="mt-1 text-xs text-slate-500">Isi 0 jika belum ada saldo di sumber ini.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
   </div>
 
   <div class="mb-6">
@@ -21,7 +27,7 @@
       <p role="alert" class="mt-1 text-sm text-red-700">{{ form.opening_balance_date.errors|join:" " }}</p>
     {% else %}
       <p class="mt-1 text-xs text-slate-500">
-        Tidak boleh melebihi hari ini{% if business_start_date %} dan tidak sebelum tanggal mulai usaha{% endif %}.
+        Tanggal saldo awal yang sama berlaku untuk keempat sumber uang.
       </p>
     {% endif %}
   </div>

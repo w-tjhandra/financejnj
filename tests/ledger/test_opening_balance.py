@@ -39,7 +39,13 @@ def auth_client(client, seeded):
 def _post_opening(client, *, amount="300.000.000", value_date="2026-09-01"):
     return client.post(
         reverse("opening_balance"),
-        {"opening_balance": amount, "opening_balance_date": value_date},
+        {
+            "opening_balance_cash": amount,
+            "opening_balance_bca": "0",
+            "opening_balance_mandiri": "0",
+            "opening_balance_ibk": "0",
+            "opening_balance_date": value_date,
+        },
     )
 
 
@@ -48,11 +54,11 @@ def test_ac_07_1_saldo_awal_bisa_diubah_sebelum_ada_transaksi(auth_client):
     response = _post_opening(auth_client)
 
     assert response.status_code == 302
-    account = Account.objects.get()
+    account = Account.objects.get(code="cash")
     assert account.opening_balance == Decimal("300000000.00")
     assert account.opening_balance_date == date(2026, 9, 1)
 
-    audit = AuditLog.objects.get(entity="account", action="update")
+    audit = AuditLog.objects.get(entity="account", entity_id=account.pk, action="update")
     assert audit.after["opening_balance"] == "300000000.00"
     assert audit.before["opening_balance"] == "250000000.00"
 
@@ -64,7 +70,7 @@ def test_ac_07_1_saldo_awal_bisa_diubah_sebelum_ada_transaksi(auth_client):
 
 @pytest.mark.django_db
 def test_ac_07_2_setelah_transaksi_readonly_dan_ada_tombol_koreksi(auth_client, seeded):
-    account = Account.objects.get()
+    account = Account.objects.get(code="cash")
     make_transaction(
         item=Item.objects.get(code="medicine"),
         account=account,
@@ -105,9 +111,9 @@ def test_ac_07_7_movement_tidak_mengunci_kas_dan_transaksi_terhapus_mengunci(aut
     assert "Belum terkunci" in page.content.decode()
 
     assert _post_opening(auth_client, amount="275.000.000").status_code == 302
-    assert Account.objects.get().opening_balance == Decimal("275000000.00")
+    assert Account.objects.get(code="cash").opening_balance == Decimal("275000000.00")
 
-    account = Account.objects.get()
+    account = Account.objects.get(code="cash")
     txn = make_transaction(
         item=Item.objects.get(code="medicine"),
         account=account,
@@ -130,7 +136,7 @@ def test_tanggal_saldo_awal_masa_depan_ditolak(auth_client):
 
     assert response.status_code == 200
     assert messages.DATE_AFTER_TODAY in response.content.decode()
-    assert Account.objects.get().opening_balance == Decimal("250000000.00")
+    assert Account.objects.get(code="cash").opening_balance == Decimal("250000000.00")
 
 
 @pytest.mark.django_db
@@ -141,4 +147,4 @@ def test_tanggal_saldo_awal_sebelum_mulai_usaha_ditolak(auth_client):
 
     assert response.status_code == 200
     assert "tidak boleh sebelum tanggal mulai usaha" in response.content.decode()
-    assert Account.objects.get().opening_balance_date == date(2026, 9, 1)
+    assert Account.objects.get(code="cash").opening_balance_date == date(2026, 9, 1)

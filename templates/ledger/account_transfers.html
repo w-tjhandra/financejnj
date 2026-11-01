@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% load core_tags %}
+
+{% block title %}Pindah Dana · {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="workspace-page">
+  <header class="page-heading">
+    <div>
+      <h1>Pindah dana</h1>
+      <p class="page-description">Catat perpindahan uang antar BCA, Mandiri, IBK, dan Tunai. Pindah dana bukan pemasukan atau pengeluaran usaha.</p>
+    </div>
+  </header>
+
+  <section class="card mb-6">
+    <h2 class="text-lg font-semibold text-slate-900">Saldo saat ini</h2>
+    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {% for row in balances %}
+        <article class="rounded-xl border border-slate-200 p-4">
+          <p class="text-sm text-slate-500">{{ row.name }}</p>
+          <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900">Rp {{ row.balance|money_id }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card mb-6">
+    <h2 class="text-lg font-semibold text-slate-900">Catat perpindahan</h2>
+    <form method="post" class="mt-4 grid gap-4 sm:grid-cols-2" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div role="alert" class="sm:col-span-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+          {{ form.non_field_errors|join:" " }}
+        </div>
+      {% endif %}
+      {% for field in form %}
+        <div>
+          <label for="{{ field.id_for_label }}" class="label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p role="alert" class="mt-1 text-sm text-red-700">{{ field.errors|join:" " }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <p class="sm:col-span-2 text-sm text-slate-500">Saldo sumber tidak boleh kurang dari nominal yang dipindahkan.</p>
+      <div class="sm:col-span-2">
+        <button type="submit" class="btn">Simpan pindah dana</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card overflow-hidden">
+    <h2 class="px-4 py-3 border-b border-slate-200 text-lg font-semibold text-slate-900">Riwayat pindah dana</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 text-left">Tanggal</th>
+            <th class="px-4 py-3 text-left">Dari</th>
+            <th class="px-4 py-3 text-left">Ke</th>
+            <th class="px-4 py-3 text-right">Nominal</th>
+            <th class="px-4 py-3 text-left">Keterangan</th>
+            <th class="px-4 py-3 text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for transfer in transfers %}
+            <tr>
+              <td class="px-4 py-3">{{ transfer.date|date:"d/m/Y" }}</td>
+              <td class="px-4 py-3">{{ transfer.from_account.name }}</td>
+              <td class="px-4 py-3">{{ transfer.to_account.name }}</td>
+              <td class="px-4 py-3 text-right tabular-nums">Rp {{ transfer.amount|money_id }}</td>
+              <td class="px-4 py-3">{{ transfer.notes|default:"—" }}</td>
+              <td class="px-4 py-3 text-right">
+                <form method="post" action="{% url 'account_transfer_delete' transfer.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-secondary">Batalkan</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Belum ada pindah dana.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

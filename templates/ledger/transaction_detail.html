@@ -65,9 +65,14 @@
           </div>
         {% endif %}
         <div>
-          <dt class="text-slate-500">Metode bayar</dt>
-          <dd class="mt-1 text-slate-900">{{ payment_display }}{% if transfer_bank_display %} · {{ transfer_bank_display }}{% endif %}</dd>
+          <dt class="text-slate-500">Sumber uang</dt>
+          <dd class="mt-1 text-slate-900">{{ txn.account.name }} · {{ payment_display }}{% if transfer_bank_display %} · {{ transfer_bank_display }}{% endif %}</dd>
         </div>
+        {% if txn.needs_account_review %}
+          <div class="sm:col-span-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+            Bank transaksi lama belum diketahui. Periksa dan pilih bank yang benar sebelum mengubah transaksi.
+          </div>
+        {% endif %}
         {% if period_display %}
           <div>
             <dt class="text-slate-500">Bulan gaji</dt>

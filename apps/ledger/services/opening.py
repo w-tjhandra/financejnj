@@ -19,7 +19,7 @@ from core.errors import DomainError
 from core.models import CompanyProfile
 from core.services.locks import assert_date_editable
 from core.utils.dates import today_wib
-from ledger.models import Account, Transaction
+from ledger.models import ACCOUNT_CHOICES, Account, Transaction
 from master.models import Category, Item
 
 AUDIT_FIELDS = ("opening_balance", "opening_balance_date")
@@ -62,10 +62,11 @@ def set_opening_balance(
     *,
     amount: object,
     value_date: date,
+    account_code: str | None = None,
     actor=None,
     meta=None,
 ) -> Account:
-    """Ubah saldo awal selama belum ada transaksi; validasi tanggal AC-07.6."""
+    """Ubah satu saldo awal selama belum ada transaksi."""
     try:
         opening_balance = amount if isinstance(amount, Decimal) else Decimal(str(amount))
     except (ArithmeticError, TypeError, ValueError) as exc:
@@ -94,7 +95,13 @@ def set_opening_balance(
             )
 
     with transaction.atomic():
-        account = Account.objects.select_for_update().order_by("pk").first()
+        if account_code:
+            account = Account.objects.select_for_update().filter(code=account_code).first()
+        else:
+            account = (
+                Account.objects.select_for_update().filter(code="cash").first()
+                or Account.objects.select_for_update().order_by("pk").first()
+            )
         if account is None:
             raise DomainError("Akun kas belum dibuat.", code="account_missing")
         if Transaction.all_objects.exists():
@@ -121,6 +128,37 @@ def set_opening_balance(
                 meta=meta,
             )
         return account
+
+
+def set_opening_balances(
+    *,
+    balances: dict[str, object],
+    value_date: date,
+    actor=None,
+    meta=None,
+) -> list[Account]:
+    """Set all four source balances together before the first transaction."""
+    if set(balances) != {code for code, _label in ACCOUNT_CHOICES}:
+        raise DomainError("Saldo untuk keempat sumber wajib diisi.", code="accounts_incomplete")
+    saved = []
+    with transaction.atomic():
+        if Transaction.all_objects.exists():
+            raise DomainError(
+                messages.OPENING_BALANCE_LOCKED,
+                code="opening_locked",
+                fields={"opening_balance": messages.OPENING_BALANCE_LOCKED},
+            )
+        for code, _label in ACCOUNT_CHOICES:
+            saved.append(
+                set_opening_balance(
+                    amount=balances[code],
+                    value_date=value_date,
+                    account_code=code,
+                    actor=actor,
+                    meta=meta,
+                )
+            )
+    return saved
 
 
 def _correction_delta(value: object) -> Decimal:
@@ -151,6 +189,7 @@ def record_opening_correction(
     *,
     delta: object,
     reason: str,
+    account_code: str | None = None,
     actor=None,
     meta=None,
 ) -> Transaction:
@@ -174,7 +213,13 @@ def record_opening_correction(
         raise DomainError("Master koreksi saldo awal belum tersedia.", code="master_missing")
 
     with transaction.atomic():
-        account = Account.objects.select_for_update().order_by("pk").first()
+        if account_code:
+            account = Account.objects.select_for_update().filter(code=account_code).first()
+        else:
+            account = (
+                Account.objects.select_for_update().filter(code="cash").first()
+                or Account.objects.select_for_update().order_by("pk").first()
+            )
         if account is None:
             raise DomainError("Akun kas belum dibuat.", code="account_missing")
         if not cash_is_locked():

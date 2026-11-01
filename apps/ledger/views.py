@@ -16,7 +16,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_GET, require_http_methods
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 from weasyprint import HTML
 
 from core import messages
@@ -34,18 +34,24 @@ from core.utils.dates import (
 )
 from core.utils.numbers import format_id_number, format_money, format_qty
 from ledger.forms import (
-    OpeningBalanceForm,
+    AccountTransferForm,
+    MultiAccountOpeningBalanceForm,
     OpeningCorrectionForm,
     TransactionForm,
     transaction_initial,
 )
-from ledger.models import Attachment, Transaction
+from ledger.models import ACCOUNT_CHOICES, Account, AccountTransfer, Attachment, Transaction
+from ledger.services.account_transfers import (
+    create_account_transfer,
+    delete_account_transfer,
+)
+from ledger.services.accounts import account_balances_at, ensure_default_accounts
 from ledger.services.opening import (
     cash_is_locked,
     cash_locked_since,
     current_account,
     record_opening_correction,
-    set_opening_balance,
+    set_opening_balances,
 )
 from ledger.services.transactions import (
     create_transaction,
@@ -84,18 +90,26 @@ def opening_balance(request: HttpRequest) -> HttpResponse:
     if account is None:
         raise Http404("Akun kas belum tersedia.")
 
+    if any(not Account.objects.filter(code=code).exists() for code, _label in ACCOUNT_CHOICES):
+        ensure_default_accounts(opening_balance_date=account.opening_balance_date)
+    accounts = {
+        row.code: row
+        for row in Account.objects.filter(is_active=True)
+    }
     profile = CompanyProfile.get_solo()
     business_start_date = profile.business_start_date if profile is not None else None
     locked = cash_is_locked()
     locked_since = cash_locked_since() if locked else None
 
-    form = OpeningBalanceForm(
+    initial = {
+        f"opening_balance_{code}": format_id_number(accounts[code].opening_balance, 2)
+        for code, _label in ACCOUNT_CHOICES
+    }
+    initial["opening_balance_date"] = account.opening_balance_date.isoformat()
+    form = MultiAccountOpeningBalanceForm(
         request.POST or None,
         business_start_date=business_start_date,
-        initial={
-            "opening_balance": format_id_number(account.opening_balance, 2),
-            "opening_balance_date": account.opening_balance_date.isoformat(),
-        },
+        initial=initial,
     )
     if request.method == "POST":
         if locked:
@@ -103,8 +117,11 @@ def opening_balance(request: HttpRequest) -> HttpResponse:
             return redirect("opening_balance")
         if form.is_valid():
             try:
-                set_opening_balance(
-                    amount=form.cleaned_data["opening_balance"],
+                set_opening_balances(
+                    balances={
+                        code: form.cleaned_data[f"opening_balance_{code}"]
+                        for code, _label in ACCOUNT_CHOICES
+                    },
                     value_date=form.cleaned_data["opening_balance_date"],
                     actor=request.user,
                     meta=_meta(request),
@@ -128,10 +145,67 @@ def opening_balance(request: HttpRequest) -> HttpResponse:
             "locked": locked,
             "locked_since": locked_since,
             "locked_since_short": format_date_short(locked_since) if locked_since else "",
-            "opening_display": format_money(account.opening_balance),
             "opening_date_display": format_date_long_id(account.opening_balance_date),
+            "accounts": [accounts[code] for code, _label in ACCOUNT_CHOICES],
+            "opening_fields": [
+                {
+                    "account": accounts[code],
+                    "field": form[f"opening_balance_{code}"],
+                }
+                for code, _label in ACCOUNT_CHOICES
+            ],
         },
     )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def account_transfers(request: HttpRequest) -> HttpResponse:
+    form = AccountTransferForm(request.POST or None, initial={"date": today_wib()})
+    if request.method == "POST" and form.is_valid():
+        try:
+            create_account_transfer(
+                value_date=form.cleaned_data["date"],
+                from_code=form.cleaned_data["from_account"].code,
+                to_code=form.cleaned_data["to_account"].code,
+                amount=form.cleaned_data["amount"],
+                notes=form.cleaned_data["notes"],
+                actor=request.user,
+                meta=_meta(request),
+            )
+        except DomainError as exc:
+            _attach_error(form, exc)
+            flash.error(request, exc.message)
+        else:
+            flash.success(request, "Pindah dana berhasil dicatat.")
+            return redirect("account_transfers")
+
+    return render(
+        request,
+        "ledger/account_transfers.html",
+        {
+            "form": form,
+            "balances": account_balances_at(today_wib()),
+            "transfers": AccountTransfer.objects.select_related(
+                "from_account", "to_account"
+            )[:50],
+            "today": today_wib(),
+        },
+    )
+
+
+@login_required
+@require_POST
+def account_transfer_delete(request: HttpRequest, pk: int) -> HttpResponse:
+    try:
+        delete_account_transfer(transfer_id=pk, actor=request.user, meta=_meta(request))
+    except NotFound as exc:
+        raise Http404(exc.message) from exc
+    except DomainError as exc:
+        flash.error(request, exc.message)
+    else:
+        flash.success(request, "Pindah dana berhasil dibatalkan.")
+    return redirect("account_transfers")
 
 
 # --- Transaksi: form, detail, hapus (FR-08…FR-11) -------------------------
@@ -651,7 +725,8 @@ def opening_correction(request: HttpRequest) -> HttpResponse:
     GET: tampil form (tanggal read-only = opening_balance_date)
     POST: validasi, panggil record_opening_correction(), redirect ke opening_balance + pesan sukses
     """
-    account = current_account()
+    account_code = request.POST.get("account_code", "cash") if request.method == "POST" else "cash"
+    account = Account.by_code(account_code) or current_account()
     if account is None:
         raise Http404("Akun kas belum tersedia.")
 
@@ -669,6 +744,7 @@ def opening_correction(request: HttpRequest) -> HttpResponse:
     form = OpeningCorrectionForm(
         request.POST or None,
         opening_balance_date=account.opening_balance_date,
+        account_code=account.code or "cash",
     )
     if request.method == "POST" and form.is_valid():
         try:
@@ -679,6 +755,7 @@ def opening_correction(request: HttpRequest) -> HttpResponse:
             record_opening_correction(
                 delta=delta,
                 reason=form.cleaned_data["reason"],
+                account_code=form.cleaned_data["account_code"],
                 actor=request.user,
                 meta=_meta(request),
             )
@@ -689,7 +766,10 @@ def opening_correction(request: HttpRequest) -> HttpResponse:
             else:
                 form.add_error(None, exc.message)
         else:
-            flash.success(request, "Koreksi saldo awal tercatat. Saldo kas & mutasi diperbarui.")
+            flash.success(
+                request,
+                "Koreksi saldo awal tercatat. Saldo sumber dan mutasi diperbarui.",
+            )
             return redirect("opening_balance")
 
     return render(

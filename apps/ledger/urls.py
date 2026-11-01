@@ -9,6 +9,12 @@ urlpatterns = [
     path("baru", views.transaction_create, name="transaction_create"),
     path("field-item", views.transaction_item_fields, name="transaction_item_fields"),
     path("opsi-item", views.transaction_item_options, name="transaction_item_options"),
+    path("pindah-dana", views.account_transfers, name="account_transfers"),
+    path(
+        "pindah-dana/<int:pk>/hapus",
+        views.account_transfer_delete,
+        name="account_transfer_delete",
+    ),
     path("<int:pk>", views.transaction_detail, name="transaction_detail"),
     path("<int:pk>/ubah", views.transaction_update, name="transaction_update"),
     path("<int:pk>/hapus", views.transaction_delete, name="transaction_delete"),

@@ -14,7 +14,8 @@ from core import messages
 from core.services.locks import lock_period
 from core.utils.dates import today_wib
 from ledger.forms import transaction_initial
-from ledger.models import Transaction
+from ledger.models import Account, AccountTransfer, Transaction
+from ledger.services.accounts import account_balance_at
 from ledger.services.opening import record_opening_correction
 from ledger.services.transactions import create_transaction
 from master.models import Category, Item, StockItem
@@ -160,8 +161,75 @@ def test_transaksi_transfer_menyimpan_bank_yang_dipilih(auth_client, bank, label
     assert response.status_code == 302
     txn = Transaction.objects.get()
     assert txn.transfer_bank == bank
+    assert txn.account.code == bank
     detail = _detail(auth_client, txn).content.decode()
     assert f"Transfer · {label}" in detail
+
+
+def test_transaksi_tunai_masuk_ke_akun_tunai(auth_client):
+    response = _post_create(auth_client, payment_method="cash", transfer_bank="")
+
+    assert response.status_code == 302
+    assert Transaction.objects.get().account.code == "cash"
+
+
+def test_pindah_dana_mengubah_saldo_kedua_akun_tanpa_mengubah_total(auth_client):
+    cash = Account.objects.get(code="cash")
+    bca = Account.objects.get(code="bca")
+    before_total = sum(
+        account_balance_at(account, date(2026, 9, 20))
+        for account in Account.objects.filter(is_active=True)
+    )
+
+    response = auth_client.post(
+        reverse("account_transfers"),
+        {
+            "date": "2026-09-20",
+            "from_account": cash.pk,
+            "to_account": bca.pk,
+            "amount": "125.000",
+            "notes": "Setor tunai ke bank",
+        },
+    )
+
+    assert response.status_code == 302
+    transfer = AccountTransfer.objects.get()
+    assert transfer.from_account.code == "cash"
+    assert transfer.to_account.code == "bca"
+    assert account_balance_at(cash, transfer.date) == Decimal("249875000.00")
+    assert account_balance_at(bca, transfer.date) == Decimal("125000.00")
+    audit = AuditLog.objects.get(
+        entity="account_transfer",
+        entity_id=transfer.pk,
+        action="create",
+    )
+    assert audit.after["from_account"] == cash.pk
+    assert audit.after["to_account"] == bca.pk
+    after_total = sum(
+        account_balance_at(account, transfer.date)
+        for account in Account.objects.filter(is_active=True)
+    )
+    assert after_total == before_total
+
+
+def test_pindah_dana_menolak_nominal_melebihi_saldo_sumber(auth_client):
+    cash = Account.objects.get(code="cash")
+    bca = Account.objects.get(code="bca")
+
+    response = auth_client.post(
+        reverse("account_transfers"),
+        {
+            "date": "2026-09-20",
+            "from_account": bca.pk,
+            "to_account": cash.pk,
+            "amount": "1.000",
+            "notes": "Saldo tidak cukup",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "Saldo sumber tidak cukup" in response.content.decode()
+    assert not AccountTransfer.objects.exists()
 
 
 def test_ac_09_1_item_bulanan_memunculkan_bulan_gaji(auth_client):
@@ -343,6 +411,8 @@ def test_ac_09_2_gaji_duplikat_redirect_ke_edit_dengan_banner(auth_client):
         flow="expense",
         category=Category.objects.get(code="LAYER"),
         item=Item.objects.get(code="salary"),
+        payment_method="transfer",
+        transfer_bank="bca",
         amount="6000000",
         period_month=date(2026, 10, 1),
     )

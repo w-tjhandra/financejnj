@@ -6,9 +6,12 @@ semua dalam satu transaksi. Untuk langkah 2-5 pengguna wajib login.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_not_required
+from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -19,7 +22,8 @@ from core.models import CompanyProfile
 from core.services.setup_state import SETUP_DRAFT_KEY, SetupStep, resolve_setup_step, step_url
 from core.utils.dates import format_date_long_id, format_date_short, today_wib
 from core.utils.numbers import format_id_number, format_money, format_qty
-from ledger.models import Account
+from ledger.models import ACCOUNT_CHOICES, Account
+from ledger.services.accounts import ensure_default_accounts
 from onboarding.errors import SetupIncomplete
 from onboarding.forms import (
     AccountSetupForm,
@@ -171,14 +175,18 @@ def step_balance(request: HttpRequest) -> HttpResponse:
         return redirect(step_url(step))
 
     profile = CompanyProfile.get_solo()
-    account = Account.objects.order_by("pk").first()
+    accounts = {account.code: account for account in Account.objects.all()}
 
-    initial = {}
-    if account is not None:
-        initial = {
-            "opening_balance": format_id_number(account.opening_balance, 2),
-            "opening_balance_date": account.opening_balance_date.isoformat(),
-        }
+    initial = {
+        f"opening_balance_{code}": format_id_number(
+            accounts[code].opening_balance if code in accounts else 0, 2
+        )
+        for code, _label in ACCOUNT_CHOICES
+    }
+    if accounts:
+        initial["opening_balance_date"] = (
+            next(iter(accounts.values())).opening_balance_date.isoformat()
+        )
     else:
         initial["opening_balance_date"] = (
             profile.business_start_date.isoformat()
@@ -192,16 +200,21 @@ def step_balance(request: HttpRequest) -> HttpResponse:
         initial=initial,
     )
     if request.method == "POST" and form.is_valid():
-        values = {
-            "opening_balance": form.cleaned_data["opening_balance"],
-            "opening_balance_date": form.cleaned_data["opening_balance_date"],
+        opening_balances = {
+            code: form.cleaned_data[f"opening_balance_{code}"]
+            for code, _label in ACCOUNT_CHOICES
         }
-        if account is None:
-            Account.objects.create(name="Kas Utama", type="cash", currency="IDR", **values)
-        else:
-            for field, value in values.items():
-                setattr(account, field, value)
-            account.save(update_fields=[*values.keys(), "updated_at"])
+        with transaction.atomic():
+            saved_accounts = ensure_default_accounts(
+                opening_balance_date=form.cleaned_data["opening_balance_date"],
+                opening_balances=opening_balances,
+            )
+            for account in saved_accounts:
+                account.opening_balance = opening_balances[account.code]
+                account.opening_balance_date = form.cleaned_data["opening_balance_date"]
+                account.save(
+                    update_fields=["opening_balance", "opening_balance_date", "updated_at"]
+                )
         return redirect("setup_stock")
 
     context = {
@@ -259,7 +272,10 @@ def step_stock(request: HttpRequest) -> HttpResponse:
 
 def _summary_context(request: HttpRequest) -> dict:
     profile = CompanyProfile.get_solo()
-    account = Account.objects.order_by("pk").first()
+    accounts = {
+        account.code: account
+        for account in Account.objects.filter(is_active=True)
+    }
     draft = (request.session.get(SETUP_DRAFT_KEY) or {}).get("stock") or {}
     user = request.user
 
@@ -280,12 +296,25 @@ def _summary_context(request: HttpRequest) -> dict:
     return {
         "user": user,
         "profile": profile,
-        "account": account,
-        "stock_rows": stock_rows,
-        "balance_display": format_money(account.opening_balance) if account else "0,00",
-        "balance_date_display": (
-            format_date_short(account.opening_balance_date) if account else "-"
+        "accounts": [
+            {
+                "name": label,
+                "balance": format_money(
+                    accounts[code].opening_balance if code in accounts else Decimal("0")
+                ),
+            }
+            for code, label in ACCOUNT_CHOICES
+        ],
+        "balance_total_display": format_money(
+            sum(
+                (account.opening_balance for account in accounts.values()),
+                Decimal("0"),
+            )
         ),
+        "stock_rows": stock_rows,
+        "balance_date_display": format_date_short(
+            next(iter(accounts.values())).opening_balance_date
+        ) if accounts else "-",
         "business_start_display": (
             format_date_long_id(profile.business_start_date)
             if profile and profile.business_start_date
