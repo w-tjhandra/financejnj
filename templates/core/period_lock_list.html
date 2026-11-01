@@ -11,38 +11,38 @@
     </div>
   </header>
 
-  <section class="period-lock-rules" aria-label="Aturan kunci periode">
-    <article class="period-lock-rule">
+  <section class="period-lock-rules grid grid-cols-1 gap-4 mb-5 md:grid-cols-3" aria-label="Aturan kunci periode">
+    <article class="card period-lock-rule">
       <h2>Periksa sebelum mengunci</h2>
       <p>Data transaksi, stok harian, dan penyesuaian pada bulan terkunci tidak dapat diubah.</p>
     </article>
-    <article class="period-lock-rule">
+    <article class="card period-lock-rule">
       <h2>Kunci secara berurutan</h2>
       <p>Bulan sebelumnya harus sudah terkunci. Jangan melewati bulan yang masih terbuka.</p>
     </article>
-    <article class="period-lock-rule">
+    <article class="card period-lock-rule">
       <h2>Buka kembali dengan alasan</h2>
       <p>Hanya bulan terkunci terbaru yang dapat dibuka. Alasan pembukaan akan tercatat.</p>
     </article>
   </section>
 
-  <section class="period-lock-summary" aria-label="Ringkasan periode">
-    <article class="period-lock-summary-card">
+  <section class="period-lock-summary grid grid-cols-1 gap-4 mb-5 md:grid-cols-2" aria-label="Ringkasan periode">
+    <article class="card period-lock-summary-card">
       <span>Awal rentang daftar</span>
       <strong>{{ months.0.period|date:"F Y" }}</strong>
       <small>Daftar menampilkan periode hingga bulan berikutnya.</small>
     </article>
-    <article class="period-lock-summary-card">
+    <article class="card period-lock-summary-card">
       <span>Kunci terakhir</span>
       <strong>{% if max_locked %}{{ max_locked|date:"F Y" }}{% else %}Belum ada{% endif %}</strong>
       <small>Periksa status rantai sebelum mengunci bulan berikutnya.</small>
     </article>
   </section>
 
-  <section class="period-lock-table-card" aria-label="Daftar status periode">
-    <div class="period-lock-table-heading">
-      <h2>Status per bulan</h2>
-      <p>Gunakan tombol di kolom aksi untuk mengunci atau membuka periode.</p>
+  <section class="card period-lock-table-card overflow-hidden p-0" aria-label="Daftar status periode">
+    <div class="period-lock-table-heading border-b border-slate-200 px-4 py-4 sm:px-6">
+      <h2 class="font-semibold text-slate-900">Status per bulan</h2>
+      <p class="mt-1 text-sm text-slate-500">Gunakan tombol di kolom aksi untuk mengunci atau membuka periode.</p>
     </div>
     <div class="table-scroll">
       <table class="data-table period-lock-table">

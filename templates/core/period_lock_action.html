@@ -12,10 +12,10 @@
     <a href="{% url 'period_lock_list' %}" class="btn btn-secondary">Kembali ke daftar</a>
   </header>
 
-  <section class="period-lock-detail-card" aria-labelledby="period-status-title">
-    <div class="period-lock-table-heading">
-      <h2 id="period-status-title">Status periode</h2>
-      <p>Periksa informasi ini sebelum melanjutkan.</p>
+  <section class="card period-lock-detail-card" aria-labelledby="period-status-title">
+    <div class="period-lock-table-heading border-b border-slate-200 pb-4">
+      <h2 id="period-status-title" class="font-semibold text-slate-900">Status periode</h2>
+      <p class="mt-1 text-sm text-slate-500">Periksa informasi ini sebelum melanjutkan.</p>
     </div>
     <dl class="period-lock-detail-grid">
       <div>
@@ -75,11 +75,11 @@
     </dl>
   </section>
 
-  <form method="post" class="period-lock-action-card">
+  <form method="post" class="card period-lock-action-card p-0">
     {% csrf_token %}
-    <div class="period-lock-table-heading">
-      <h2>{% if status.is_locked %}Buka kembali periode{% else %}Kunci periode{% endif %}</h2>
-      <p>
+    <div class="period-lock-table-heading border-b border-slate-200 px-4 py-4 sm:px-6">
+      <h2 class="font-semibold text-slate-900">{% if status.is_locked %}Buka kembali periode{% else %}Kunci periode{% endif %}</h2>
+      <p class="mt-1 text-sm text-slate-500">
         {% if status.is_locked %}
           Membuka periode memungkinkan data pada bulan ini diubah kembali.
         {% else %}
