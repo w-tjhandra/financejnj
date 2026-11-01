@@ -453,6 +453,226 @@ textarea {
   max-width: 84rem;
 }
 
+.period-lock-page {
+  max-width: 84rem;
+}
+
+.period-lock-rules,
+.period-lock-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .85rem;
+  margin-bottom: 1.25rem;
+}
+
+.period-lock-rule,
+.period-lock-summary-card,
+.period-lock-detail-card,
+.period-lock-action-card,
+.period-lock-table-card {
+  min-width: 0;
+  border: 1px solid #e0e7e1;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(26 47 33 / 3%);
+}
+
+.period-lock-rule {
+  padding: 1rem 1.1rem;
+}
+
+.period-lock-rule h2,
+.period-lock-table-heading h2 {
+  color: #25352b;
+  font-size: .88rem;
+  font-weight: 680;
+}
+
+.period-lock-rule p,
+.period-lock-table-heading p {
+  margin-top: .35rem;
+  color: #728078;
+  font-size: .74rem;
+  line-height: 1.5;
+}
+
+.period-lock-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.period-lock-summary-card {
+  display: grid;
+  gap: .22rem;
+  padding: .9rem 1.1rem;
+}
+
+.period-lock-summary-card > span {
+  color: #728078;
+  font-size: .7rem;
+}
+
+.period-lock-summary-card strong {
+  color: #25352b;
+  font-size: .98rem;
+  font-weight: 700;
+}
+
+.period-lock-summary-card small {
+  color: #89968e;
+  font-size: .68rem;
+}
+
+.period-lock-table-card,
+.period-lock-detail-card,
+.period-lock-action-card {
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+
+.period-lock-table-heading {
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid #e8ede9;
+}
+
+.period-lock-table {
+  min-width: 76rem;
+}
+
+.period-lock-table .text-right {
+  text-align: right;
+}
+
+.period-lock-table td {
+  line-height: 1.4;
+}
+
+.period-lock-table .is-current-period {
+  background: #f3f8f3;
+}
+
+.period-lock-date,
+.period-lock-meta {
+  display: block;
+  white-space: nowrap;
+}
+
+.period-lock-meta {
+  margin-top: .18rem;
+  color: #89968e;
+  font-size: .66rem;
+}
+
+.period-lock-reason {
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.period-lock-status,
+.period-lock-chain {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: .23rem .58rem;
+  font-size: .68rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.period-lock-status.is-locked {
+  background: #fbe9e7;
+  color: #a23d32;
+}
+
+.period-lock-status.is-reopened {
+  background: #fff3d9;
+  color: #805c16;
+}
+
+.period-lock-status.is-open,
+.period-lock-chain.is-complete {
+  background: #e8f3eb;
+  color: #286541;
+}
+
+.period-lock-chain.is-gap {
+  background: #fbe9e7;
+  color: #a23d32;
+}
+
+.period-lock-detail-card {
+  margin-bottom: 1rem;
+}
+
+.period-lock-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  padding: .35rem 1.15rem 1rem;
+}
+
+.period-lock-detail-grid > div {
+  min-width: 0;
+  padding: .7rem .25rem;
+  border-bottom: 1px solid #edf1ed;
+}
+
+.period-lock-detail-grid dt {
+  color: #728078;
+  font-size: .72rem;
+}
+
+.period-lock-detail-grid dd {
+  margin-top: .25rem;
+  color: #25352b;
+  font-size: .82rem;
+  font-weight: 600;
+}
+
+.period-lock-detail-grid .period-lock-detail-wide {
+  grid-column: 1 / -1;
+}
+
+.period-lock-action-content {
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  padding: 1.15rem;
+}
+
+.period-lock-action-content > div:first-child {
+  width: min(100%, 38rem);
+}
+
+.period-lock-action-content textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.period-lock-help {
+  margin-top: .4rem;
+  color: #728078;
+  font-size: .72rem;
+}
+
+.period-lock-notice {
+  width: 100%;
+  border: 1px solid #dce9df;
+  border-radius: .75rem;
+  background: #f2f7f3;
+  padding: .8rem 1rem;
+  color: #386147;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.period-lock-notice.is-warning {
+  border-color: #f0dfb8;
+  background: #fff8e9;
+  color: #805c16;
+}
+
 .stock-page .page-heading,
 .report-page .page-heading {
   margin-bottom: 1.25rem;
@@ -1518,6 +1738,10 @@ textarea {
   .report-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .period-lock-rules {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 700px) {
@@ -1587,6 +1811,19 @@ textarea {
   .stock-balance-grid,
   .report-summary-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .period-lock-summary,
+  .period-lock-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .period-lock-detail-grid .period-lock-detail-wide {
+    grid-column: auto;
+  }
+
+  .period-lock-action-content > .btn {
+    width: 100%;
   }
 
   .report-filter-actions {

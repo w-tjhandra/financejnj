@@ -218,7 +218,7 @@ def period_lock_list(request: HttpRequest) -> HttpResponse:
 def period_lock_action(request: HttpRequest, period: str) -> HttpResponse:
     """Kunci atau buka kunci periode (POST)."""
     try:
-        target = date.fromisoformat(period)
+        target = date.fromisoformat(f"{period}-01")
     except ValueError:
         messages.error(request, "Format periode tidak valid.")
         return redirect("period_lock_list")
