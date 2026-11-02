@@ -13,6 +13,11 @@
   var cashflow = JSON.parse(cashflowData.textContent);
   var categoryElement = document.getElementById("dashboard-category-data");
   var categories = categoryElement ? JSON.parse(categoryElement.textContent) : null;
+  var translate = window.TelurFinanceTranslations
+    ? window.TelurFinanceTranslations.text
+    : function (text) {
+        return text;
+      };
   var fontFamily = "Helvetica, Arial, sans-serif";
   var money = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -32,7 +37,7 @@
         labels: cashflow.labels,
         datasets: [
           {
-            label: "Pemasukan",
+            label: translate("Pemasukan"),
             data: cashflow.income,
             borderColor: "#32804d",
             backgroundColor: "rgb(50 128 77 / 12%)",
@@ -42,7 +47,7 @@
             pointHoverRadius: 4,
           },
           {
-            label: "Pengeluaran",
+            label: translate("Pengeluaran"),
             data: cashflow.expense,
             borderColor: "#c66555",
             backgroundColor: "rgb(198 101 85 / 8%)",
