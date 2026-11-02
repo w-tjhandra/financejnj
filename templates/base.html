@@ -9,7 +9,7 @@
   <link rel="preload" href="{% static 'images/pt-join-nuriwell-java-logo.webp' %}" as="image" type="image/webp">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <link rel="stylesheet" href="{% static 'css/ui-refresh.css' %}?v=2">
-  <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/theme.css' %}?v=2">
   <script src="{% static 'vendor/htmx-2.0.4.min.js' %}" defer></script>
   <script src="{% static 'js/ui-language.js' %}?v=3" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
@@ -41,20 +41,26 @@
           <form method="post" action="{% url 'ui_preferences' %}" class="preference-controls">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <label class="sr-only" for="ui-language">{% if request.ui_language == 'en' %}Language{% elif request.ui_language == 'ko' %}언어{% else %}Bahasa{% endif %}</label>
-            <select id="ui-language" name="language" class="preference-select" aria-label="{% if request.ui_language == 'en' %}Language{% elif request.ui_language == 'ko' %}언어{% else %}Bahasa{% endif %}" onchange="this.form.requestSubmit()">
-              <option value="id" {% if request.ui_language == "id" %}selected{% endif %}>Indonesia</option>
-              <option value="en" {% if request.ui_language == "en" %}selected{% endif %}>English</option>
-              <option value="ko" {% if request.ui_language == "ko" %}selected{% endif %}>한국어</option>
-            </select>
-            <label class="sr-only" for="ui-theme">{% if request.ui_language == 'en' %}Theme{% elif request.ui_language == 'ko' %}테마{% else %}Tema{% endif %}</label>
-            <select id="ui-theme" name="theme" class="preference-select" aria-label="{% if request.ui_language == 'en' %}Theme{% elif request.ui_language == 'ko' %}테마{% else %}Tema{% endif %}" onchange="this.form.requestSubmit()">
-              <option value="light" {% if request.ui_theme == "light" %}selected{% endif %}>{% if request.ui_language == 'en' %}Light{% elif request.ui_language == 'ko' %}라이트{% else %}Terang{% endif %}</option>
-              <option value="dark" {% if request.ui_theme == "dark" %}selected{% endif %}>{% if request.ui_language == 'en' %}Dark{% elif request.ui_language == 'ko' %}다크{% else %}Gelap{% endif %}</option>
-            </select>
-            <button type="submit" class="preference-submit" aria-label="{% if request.ui_language == 'en' %}Apply preferences{% elif request.ui_language == 'ko' %}설정 적용{% else %}Terapkan preferensi{% endif %}">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
-            </button>
+            <label class="preference-icon-control preference-language-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+              <span class="preference-language-code" aria-hidden="true">{% if request.ui_language == "en" %}EN{% elif request.ui_language == "ko" %}KO{% else %}ID{% endif %}</span>
+              <select id="ui-language" name="language" aria-label="{% if request.ui_language == 'en' %}Language{% elif request.ui_language == 'ko' %}언어{% else %}Bahasa{% endif %}" onchange="this.form.requestSubmit()">
+                <option value="id" {% if request.ui_language == "id" %}selected{% endif %}>Indonesia</option>
+                <option value="en" {% if request.ui_language == "en" %}selected{% endif %}>English</option>
+                <option value="ko" {% if request.ui_language == "ko" %}selected{% endif %}>한국어</option>
+              </select>
+            </label>
+            <label class="preference-icon-control preference-theme-control">
+              {% if request.ui_theme == "dark" %}
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z"/></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+              {% endif %}
+              <select id="ui-theme" name="theme" aria-label="{% if request.ui_language == 'en' %}Theme{% elif request.ui_language == 'ko' %}테마{% else %}Tema{% endif %}" onchange="this.form.requestSubmit()">
+                <option value="light" {% if request.ui_theme == "light" %}selected{% endif %}>{% if request.ui_language == 'en' %}Light{% elif request.ui_language == 'ko' %}라이트{% else %}Terang{% endif %}</option>
+                <option value="dark" {% if request.ui_theme == "dark" %}selected{% endif %}>{% if request.ui_language == 'en' %}Dark{% elif request.ui_language == 'ko' %}다크{% else %}Gelap{% endif %}</option>
+              </select>
+            </label>
           </form>
           <a href="{% url 'transaction_create' %}" class="topbar-action">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg>
