@@ -11,6 +11,7 @@ from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.db import connection
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import translation
 from django.utils.decorators import method_decorator
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
@@ -19,7 +20,8 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from core import messages as core_messages
 from core.errors import DomainError
 from core.forms import AccountPasswordChangeForm, CompanyProfileForm, LoginForm
-from core.models import CompanyProfile
+from core.middleware_preferences import LANGUAGE_SESSION_KEY
+from core.models import CompanyProfile, UserPreference
 from core.services.locks import (
     AlreadyLocked,
     AlreadyUnlocked,
@@ -113,6 +115,27 @@ def logout_view(request: HttpRequest):
     """Logout hanya lewat POST (CSRF) sesuai rancangan §6.2."""
     logout(request)
     return redirect("login")
+
+
+@login_required
+@require_POST
+def ui_preferences(request: HttpRequest) -> HttpResponse:
+    language = request.POST.get("language", "id")
+    theme = request.POST.get("theme", "light")
+    if language not in dict(UserPreference.LANGUAGE_CHOICES):
+        messages.error(request, "Bahasa yang dipilih tidak didukung.")
+        return redirect(_safe_next_url(request) or "dashboard")
+    if theme not in dict(UserPreference.THEME_CHOICES):
+        messages.error(request, "Tema yang dipilih tidak didukung.")
+        return redirect(_safe_next_url(request) or "dashboard")
+
+    preference, _ = UserPreference.objects.get_or_create(user=request.user)
+    preference.language = language
+    preference.theme = theme
+    preference.save(update_fields=["language", "theme", "updated_at"])
+    request.session[LANGUAGE_SESSION_KEY] = language
+    translation.activate(language)
+    return redirect(_safe_next_url(request) or "dashboard")
 
 
 @login_required

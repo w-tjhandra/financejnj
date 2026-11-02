@@ -91,6 +91,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware_preferences.AccountPreferencesMiddleware",
     "core.middleware.SetupGuardMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
@@ -137,6 +138,11 @@ PASSWORD_HASHERS = [
 ]
 
 LANGUAGE_CODE = "id"
+LANGUAGES = [
+    ("id", "Bahasa Indonesia"),
+    ("en", "English"),
+    ("ko", "한국어"),
+]
 TIME_ZONE = "Asia/Jakarta"
 USE_I18N = True
 USE_TZ = True

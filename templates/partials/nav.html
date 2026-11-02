@@ -8,7 +8,7 @@
      @click="sidebarOpen = false"
      aria-hidden="true"></div>
 
-<aside id="app-navigation" class="sidebar-panel" :class="{ 'is-open': sidebarOpen }" aria-label="Navigasi aplikasi">
+<aside id="app-navigation" class="sidebar-panel" :class="{ 'is-open': sidebarOpen }" aria-label="{% if request.ui_language == 'en' %}Application navigation{% elif request.ui_language == 'ko' %}앱 탐색{% else %}Navigasi aplikasi{% endif %}">
   <div class="sidebar-brand">
     <a href="{% url 'dashboard' %}" class="brand-link">
       <span class="brand-logo-frame">
@@ -16,91 +16,91 @@
       </span>
       <span class="brand-copy">
         <strong>PT Join Nuriwell Java</strong>
-        <small>OPERASIONAL TERNAK</small>
+        <small>{% if request.ui_language == 'en' %}FARM OPERATIONS{% elif request.ui_language == 'ko' %}농장 운영{% else %}OPERASIONAL TERNAK{% endif %}</small>
       </span>
     </a>
-    <button type="button" class="sidebar-close" @click="sidebarOpen = false" aria-label="Tutup menu">
+    <button type="button" class="sidebar-close" @click="sidebarOpen = false" aria-label="{% if request.ui_language == 'en' %}Close menu{% elif request.ui_language == 'ko' %}메뉴 닫기{% else %}Tutup menu{% endif %}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
     </button>
   </div>
 
   <nav class="sidebar-nav" aria-label="Navigasi utama">
-    <p class="nav-caption">Ruang kerja</p>
+    <p class="nav-caption">{% if request.ui_language == 'en' %}Workspace{% elif request.ui_language == 'ko' %}워크스페이스{% else %}Ruang kerja{% endif %}</p>
     <a href="{% url 'dashboard' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="4" rx="1.5"/><rect x="13.5" y="10.5" width="7" height="10" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
-      <span>Dashboard</span>
+      <span>{% if request.ui_language == 'en' %}Dashboard{% elif request.ui_language == 'ko' %}대시보드{% else %}Dashboard{% endif %}</span>
     </a>
 
-    <p class="nav-caption">Keuangan</p>
+    <p class="nav-caption">{% if request.ui_language == 'en' %}Finance{% elif request.ui_language == 'ko' %}재무{% else %}Keuangan{% endif %}</p>
     <a href="{% url 'transaction_list' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'transaction_list' or request.resolver_match.url_name == 'transaction_detail' or request.resolver_match.url_name == 'transaction_create' or request.resolver_match.url_name == 'transaction_update' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
-      <span>Transaksi</span>
+      <span>{% if request.ui_language == 'en' %}Transactions{% elif request.ui_language == 'ko' %}거래{% else %}Transaksi{% endif %}</span>
     </a>
     <a href="{% url 'opening_balance' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'opening_balance' or request.resolver_match.url_name == 'opening_correction' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M15 9.5c0-1.2-1.3-2-3-2s-3 .8-3 2 1.3 2 3 2 3 .8 3 2-1.3 2-3 2-3-.8-3-2"/></svg>
-      <span>Saldo awal</span>
+      <span>{% if request.ui_language == 'en' %}Opening balances{% elif request.ui_language == 'ko' %}기초 잔액{% else %}Saldo awal{% endif %}</span>
     </a>
     <a href="{% url 'account_transfers' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'account_transfers' or request.resolver_match.url_name == 'account_transfer_delete' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h13m0 0-3-3m3 3-3 3M20 17H7m0 0 3-3m-3 3 3 3"/></svg>
-      <span>Pindah dana</span>
+      <span>{% if request.ui_language == 'en' %}Transfers{% elif request.ui_language == 'ko' %}자금 이체{% else %}Pindah dana{% endif %}</span>
     </a>
     <a href="{% url 'audit:list' %}" class="sidebar-link" {% if request.resolver_match.namespace == 'audit' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l3 3v13H5V4h3Z"/><path d="M9 11h6M9 15h6M9 7h3"/></svg>
-      <span>Riwayat transaksi</span>
+      <span>{% if request.ui_language == 'en' %}Transaction history{% elif request.ui_language == 'ko' %}거래 내역{% else %}Riwayat transaksi{% endif %}</span>
     </a>
 
-    <p class="nav-caption">Persediaan</p>
+    <p class="nav-caption">{% if request.ui_language == 'en' %}Inventory{% elif request.ui_language == 'ko' %}재고{% else %}Persediaan{% endif %}</p>
     <a href="{% url 'stock:daily' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'daily' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.5 7.5 4 7.5-4M12 12v9"/></svg>
-      <span>Stok harian</span>
+      <span>{% if request.ui_language == 'en' %}Daily stock{% elif request.ui_language == 'ko' %}일일 재고{% else %}Stok harian{% endif %}</span>
     </a>
     <a href="{% url 'stock:adjustment' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'adjustment' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
-      <span>Penyesuaian stok</span>
+      <span>{% if request.ui_language == 'en' %}Stock adjustments{% elif request.ui_language == 'ko' %}재고 조정{% else %}Penyesuaian stok{% endif %}</span>
     </a>
     <a href="{% url 'stock:settings' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'update' and request.resolver_match.namespace == 'stock' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg>
-      <span>Pengaturan stok</span>
+      <span>{% if request.ui_language == 'en' %}Stock settings{% elif request.ui_language == 'ko' %}재고 설정{% else %}Pengaturan stok{% endif %}</span>
     </a>
 
-    <p class="nav-caption">Analisis</p>
+    <p class="nav-caption">{% if request.ui_language == 'en' %}Analysis{% elif request.ui_language == 'ko' %}분석{% else %}Analisis{% endif %}</p>
     <a href="{% url 'reports:daily_recap' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'daily_recap' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16"/><path d="m7 15 4-4 3 2 5-6"/></svg>
-      <span>Rekap harian</span>
+      <span>{% if request.ui_language == 'en' %}Daily recap{% elif request.ui_language == 'ko' %}일별 요약{% else %}Rekap harian{% endif %}</span>
     </a>
     <a href="{% url 'reports:weekly_recap' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'weekly_recap' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4m8-4v4M3.5 10h17M8 14h2m4 0h2"/></svg>
-      <span>Rekap mingguan</span>
+      <span>{% if request.ui_language == 'en' %}Weekly recap{% elif request.ui_language == 'ko' %}주간 요약{% else %}Rekap mingguan{% endif %}</span>
     </a>
     <a href="{% url 'reports:monthly_recap' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'monthly_recap' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="16" rx="2"/><path d="M8 3v3m8-3v3M3.5 9h17M8 13h2m4 0h2m-8 4h2"/></svg>
-      <span>Rekap bulanan</span>
+      <span>{% if request.ui_language == 'en' %}Monthly recap{% elif request.ui_language == 'ko' %}월간 요약{% else %}Rekap bulanan{% endif %}</span>
     </a>
     <a href="{% url 'reports:yearly_recap' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'yearly_recap' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16"/><path d="M8 16v-4m4 4V8m4 8v-6"/></svg>
-      <span>Rekap tahunan</span>
+      <span>{% if request.ui_language == 'en' %}Yearly recap{% elif request.ui_language == 'ko' %}연간 요약{% else %}Rekap tahunan{% endif %}</span>
     </a>
 
-    <p class="nav-caption">Pengelolaan</p>
+    <p class="nav-caption">{% if request.ui_language == 'en' %}Management{% elif request.ui_language == 'ko' %}관리{% else %}Pengelolaan{% endif %}</p>
     <a href="{% url 'master:item_list' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'item_list' or request.resolver_match.url_name == 'item_update' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5 12 3l8 3.5v11L12 21l-8-3.5v-11Z"/><path d="m4.5 6.8 7.5 3.4 7.5-3.4M12 10.2V21"/></svg>
-      <span>Item transaksi</span>
+      <span>{% if request.ui_language == 'en' %}Transaction items{% elif request.ui_language == 'ko' %}거래 항목{% else %}Item transaksi{% endif %}</span>
     </a>
     <a href="{% url 'master:category_list' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'category_list' or request.resolver_match.url_name == 'category_update' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h10M4 19h16"/><circle cx="18" cy="12" r="2"/></svg>
-      <span>Kategori</span>
+      <span>{% if request.ui_language == 'en' %}Categories{% elif request.ui_language == 'ko' %}카테고리{% else %}Kategori{% endif %}</span>
     </a>
     <a href="{% url 'period_lock_list' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'period_lock_list' or request.resolver_match.url_name == 'period_lock_action' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg>
-      <span>Kunci periode</span>
+      <span>{% if request.ui_language == 'en' %}Period lock{% elif request.ui_language == 'ko' %}기간 잠금{% else %}Kunci periode{% endif %}</span>
     </a>
     <a href="{% url 'profile' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20v-1a7 7 0 0 1 14 0v1M11 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-7a4 4 0 0 1 0 7m2 3a6 6 0 0 1 3 5v1"/></svg>
-      <span>Profil usaha</span>
+      <span>{% if request.ui_language == 'en' %}Business profile{% elif request.ui_language == 'ko' %}사업체 프로필{% else %}Profil usaha{% endif %}</span>
     </a>
     <a href="{% url 'account_settings' %}" class="sidebar-link" {% if request.resolver_match.url_name == 'account_settings' %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2.9-1.2 2.1-1.4-.5a7 7 0 0 1-1.3.8l-.2 1.5h-2.4l-.3-1.5a7 7 0 0 1-1.3-.8l-1.4.5-1.2-2.1 1.2-.9a7 7 0 0 1 0-1.6l-1.2-.9 1.2-2.1 1.4.5a7 7 0 0 1 1.3-.8l.3-1.5h2.4l.2 1.5a7 7 0 0 1 1.3.8l1.4-.5 1.2 2.1-1.2.9a7 7 0 0 1-.1 1.6Z"/></svg>
-      <span>Akun</span>
+      <span>{% if request.ui_language == 'en' %}Account{% elif request.ui_language == 'ko' %}계정{% else %}Akun{% endif %}</span>
     </a>
   </nav>
 
@@ -108,11 +108,11 @@
     <div class="user-avatar" aria-hidden="true">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</div>
     <div class="user-copy">
       <strong>{{ user.get_full_name|default:user.username }}</strong>
-      <small>Pemilik usaha</small>
+      <small>{% if request.ui_language == 'en' %}Business owner{% elif request.ui_language == 'ko' %}사업주{% else %}Pemilik usaha{% endif %}</small>
     </div>
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
-      <button type="submit" class="logout-button" aria-label="Keluar">
+      <button type="submit" class="logout-button" aria-label="{% if request.ui_language == 'en' %}Log out{% elif request.ui_language == 'ko' %}로그아웃{% else %}Keluar{% endif %}">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5m5 5H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
       </button>
     </form>

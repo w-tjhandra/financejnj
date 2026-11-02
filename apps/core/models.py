@@ -96,6 +96,38 @@ class CompanyProfile(TimeStampedModel):
         return qs.first()
 
 
+class UserPreference(TimeStampedModel):
+    LANGUAGE_CHOICES = [
+        ("id", "Bahasa Indonesia"),
+        ("en", "English"),
+        ("ko", "한국어"),
+    ]
+    THEME_CHOICES = [
+        ("light", "Light"),
+        ("dark", "Dark"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ui_preference",
+    )
+    language = models.CharField(max_length=5, choices=LANGUAGE_CHOICES, default="id")
+    theme = models.CharField(max_length=5, choices=THEME_CHOICES, default="light")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(language__in=["id", "en", "ko"]),
+                name="user_preference_language_allowed",
+            ),
+            models.CheckConstraint(
+                condition=Q(theme__in=["light", "dark"]),
+                name="user_preference_theme_allowed",
+            ),
+        ]
+
+
 class PeriodLock(TimeStampedModel):
     """Status kunci satu bulan; riwayat lengkap ada di audit log."""
 

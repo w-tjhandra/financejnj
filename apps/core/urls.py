@@ -9,6 +9,7 @@ urlpatterns = [
     path("healthz", views.healthz, name="healthz"),
     path("masuk", views.LoginView.as_view(), name="login"),
     path("keluar", views.logout_view, name="logout"),
+    path("pengaturan/preferensi-ui", views.ui_preferences, name="ui_preferences"),
     path("pengaturan/akun", views.account_settings, name="account_settings"),
     path("pengaturan/profil", views.profile_view, name="profile"),
     path("pengaturan/kunci-periode", views.period_lock_list, name="period_lock_list"),
